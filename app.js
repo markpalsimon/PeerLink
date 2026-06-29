@@ -2842,46 +2842,56 @@ document.addEventListener("DOMContentLoaded", async () => {
 
           <!-- Video grid templates -->
           ${isVoice ? `
-            <div class="flex items-center justify-center gap-12 w-full h-full">
-              <!-- You Voice Card -->
-              <div class="flex flex-col items-center justify-center bg-slate-900 border border-slate-800 p-8 rounded-2xl w-48 shadow-lg">
-                <div class="text-5xl mb-4 w-20 h-20 bg-indigo-600/20 border border-indigo-500/40 rounded-full flex items-center justify-center animate-pulse overflow-hidden">${renderAvatar(currentUser.avatar, 'text-5xl', 'w-full h-full object-cover rounded-full')}</div>
-                <h5 class="text-xs font-bold">You</h5>
-                <p class="text-[10px] text-slate-500 mt-1">Connected</p>
+            <div class="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/40 backdrop-blur-2xl p-6 z-10 w-full h-full">
+              <!-- Blurred Avatar Background -->
+              <div class="absolute inset-0 z-0 opacity-10 overflow-hidden">
+                ${partner && partner.avatar && partner.avatar.startsWith('data:image') 
+                  ? `<img src="${partner.avatar}" class="w-full h-full object-cover blur-3xl scale-125" alt="blur-bg" />` 
+                  : `<div class="w-full h-full bg-gradient-to-tr from-indigo-900 to-slate-900"></div>`}
               </div>
-              <!-- Partner Voice Card -->
-              <div class="flex flex-col items-center justify-center bg-slate-900 border border-slate-800 p-8 rounded-2xl w-48 shadow-lg">
-                <div class="text-5xl mb-4 w-20 h-20 bg-emerald-600/20 border border-emerald-500/40 rounded-full flex items-center justify-center animate-bounce overflow-hidden">${renderAvatar(partner ? partner.avatar : '👤', 'text-5xl', 'w-full h-full object-cover rounded-full')}</div>
-                <h5 class="text-xs font-bold">${partner ? partner.name : 'Partner'}</h5>
-                <p class="text-[10px] text-brand-teal mt-1 font-semibold">Speaking...</p>
+              
+              <!-- Centered Content -->
+              <div class="relative z-10 flex flex-col items-center justify-center text-center space-y-6">
+                <div class="relative">
+                  <div class="w-28 h-28 rounded-full bg-slate-800 border-4 border-indigo-500 shadow-2xl flex items-center justify-center text-6xl overflow-hidden animate-pulse">
+                    ${renderAvatar(partner ? partner.avatar : '👤', 'text-6xl', 'w-full h-full object-cover rounded-full')}
+                  </div>
+                  <div class="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-emerald-500 border-2 border-white animate-ping"></div>
+                </div>
+                <div>
+                  <h4 class="font-heading font-extrabold text-2xl text-white tracking-wide">${partner ? partner.name : 'Study Partner'}</h4>
+                  <p class="text-sm text-slate-400 mt-1">${partner ? partner.yearSection : ''}</p>
+                </div>
+                <div class="bg-black/40 backdrop-blur px-4 py-1.5 rounded-full text-xs font-mono tracking-widest text-emerald-400 font-semibold border border-white/5 animate-pulse">
+                  SPEAKING / CONNECTED
+                </div>
               </div>
             </div>
           ` : `
-            <div class="grid grid-cols-2 gap-4 p-4 w-full h-full">
-              
+            <div class="grid grid-cols-2 gap-4 p-4 w-full h-full relative z-10">
               <!-- Self Video Stream Box -->
-              <div class="bg-slate-950 rounded-xl overflow-hidden relative border border-slate-800">
+              <div class="bg-slate-950 rounded-2xl overflow-hidden relative border border-slate-800 shadow-lg">
                 <video id="webcam-feed" class="w-full h-full object-cover" autoplay playsinline></video>
-                <div id="camera-placeholder" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-950 hidden">
-                  <div class="text-4xl mb-2 w-16 h-16 rounded-full overflow-hidden flex items-center justify-center">${renderAvatar(currentUser.avatar, 'text-4xl', 'w-full h-full object-cover rounded-full')}</div>
-                  <p class="text-xs text-slate-500">Camera Stopped</p>
+                <div id="camera-placeholder" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/80 backdrop-blur-sm hidden">
+                  <div class="text-4xl mb-2 w-16 h-16 rounded-full overflow-hidden flex items-center justify-center border-2 border-slate-700 bg-slate-800">${renderAvatar(currentUser.avatar, 'text-4xl', 'w-full h-full object-cover rounded-full')}</div>
+                  <p class="text-[10px] text-slate-400 font-semibold">Camera Off</p>
                 </div>
-                <div class="absolute bottom-3 left-3 bg-slate-950/80 px-2.5 py-1 rounded-md text-[10px] font-semibold">You</div>
+                <div class="absolute bottom-3 left-3 bg-black/60 backdrop-blur px-2.5 py-1 rounded-md text-[10px] font-semibold text-white">You</div>
               </div>
 
-              <!-- Partner Video Box (Real remote WebRTC stream) -->
-              <div class="bg-slate-950 rounded-xl overflow-hidden relative border border-slate-800">
+              <!-- Partner Video Box -->
+              <div class="bg-slate-950 rounded-2xl overflow-hidden relative border border-slate-800 shadow-lg">
                 <video id="remote-video-feed" class="w-full h-full object-cover hidden" autoplay playsinline></video>
-                <div id="remote-camera-placeholder" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-950">
-                  <div class="text-5xl mb-3 animate-bounce w-16 h-16 rounded-full overflow-hidden flex items-center justify-center">${renderAvatar(partner ? partner.avatar : '👤', 'text-5xl', 'w-full h-full object-cover rounded-full')}</div>
-                  <h5 class="text-sm font-semibold">${partner ? partner.name : 'Partner'}</h5>
-                  <p class="text-xs text-slate-500 mt-1">Waiting for partner...</p>
+                <div id="remote-camera-placeholder" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/85 backdrop-blur-sm">
+                  <div class="text-5xl mb-3 animate-bounce w-16 h-16 rounded-full overflow-hidden flex items-center justify-center border-2 border-slate-700 bg-slate-800">${renderAvatar(partner ? partner.avatar : '👤', 'text-5xl', 'w-full h-full object-cover rounded-full')}</div>
+                  <h5 class="text-xs font-semibold text-white">${partner ? partner.name : 'Partner'}</h5>
+                  <p class="text-[10px] text-slate-500 mt-1">Connecting video...</p>
                 </div>
-                <div class="absolute bottom-3 left-3 bg-slate-950/80 px-2.5 py-1 rounded-md text-[10px] font-semibold">${partner ? partner.name : 'Partner'}</div>
+                <div class="absolute bottom-3 left-3 bg-black/60 backdrop-blur px-2.5 py-1 rounded-md text-[10px] font-semibold text-white">${partner ? partner.name : 'Partner'}</div>
               </div>
-
             </div>
           `}
+        </div>
         </div>
 
         <!-- Sidebar Panel (Right Column) -->
@@ -2948,16 +2958,18 @@ document.addEventListener("DOMContentLoaded", async () => {
       </div>
 
       <!-- Footer controls bar -->
-      <div class="flex justify-center items-center gap-4 shrink-0">
-        <button onclick="toggleMute()" id="call-btn-mute" class="w-12 h-12 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-lg border border-slate-750 transition-colors" title="Mute Mic">🎙️</button>
+      <div class="flex justify-center items-center gap-4 shrink-0 pt-4 border-t border-slate-900/60 relative z-20">
+        <button onclick="toggleMute()" id="call-btn-mute" class="w-12 h-12 rounded-full bg-slate-800/80 hover:bg-slate-700 backdrop-blur flex items-center justify-center text-lg border border-slate-700 transition-all active:scale-95 text-white" title="Mute Mic">🎙️</button>
         ${!isVoice ? `
-          <button onclick="toggleCamera()" id="call-btn-cam" class="w-12 h-12 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-lg border border-slate-750 transition-colors" title="Stop Cam">📹</button>
-          <button onclick="toggleScreenShare()" id="call-btn-share" class="w-12 h-12 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-lg border border-slate-750 transition-colors" title="Share Screen">🖥️</button>
+          <button onclick="toggleCamera()" id="call-btn-cam" class="w-12 h-12 rounded-full bg-slate-800/80 hover:bg-slate-700 backdrop-blur flex items-center justify-center text-lg border border-slate-700 transition-all active:scale-95 text-white" title="Stop Cam">📹</button>
+          <button onclick="toggleScreenShare()" id="call-btn-share" class="w-12 h-12 rounded-full bg-slate-800/80 hover:bg-slate-700 backdrop-blur flex items-center justify-center text-lg border border-slate-700 transition-all active:scale-95 text-white" title="Share Screen">🖥️</button>
         ` : ''}
         ${isHost ? `
-          <button onclick="endVideoCallForEveryone()" class="px-5 py-3 rounded-full bg-red-900 hover:bg-red-800 border border-red-700 flex items-center justify-center text-xs font-bold text-red-200 transition-all shadow-lg" title="End for Everyone">⛔ End All</button>
+          <button onclick="endVideoCallForEveryone()" class="px-5 py-3 rounded-full bg-red-900/80 hover:bg-red-800 border border-red-700 flex items-center justify-center text-xs font-bold text-red-200 transition-all active:scale-95 shadow-lg" title="End for Everyone">End All</button>
         ` : ''}
-        <button onclick="endVideoCall()" class="px-6 py-3 rounded-full bg-red-600 hover:bg-red-500 flex items-center justify-center text-sm font-bold transition-all shadow-lg" title="End Call">Leave</button>
+        <button onclick="endVideoCall()" class="w-12 h-12 rounded-full bg-red-600 hover:bg-red-500 flex items-center justify-center text-lg transition-all active:scale-95 shadow-lg text-white font-bold" title="End Call">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="transform: rotate(135deg);"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
+        </button>
       </div>
     `;
 
@@ -3731,11 +3743,13 @@ document.addEventListener("DOMContentLoaded", async () => {
            </div>
 
            <!-- Chat inputs -->
-           <div class="p-4 border-t flex gap-3 bg-slate-50/50 shrink-0">
-             <input type="text" id="chat-pane-input" class="flex-1 border rounded-xl px-4 py-2.5 text-xs focus:outline-none" placeholder="Type a message to study..." ${!activeChatCollabId ? 'disabled' : ''}>
-             <button onclick="sendChatMessage()" class="bg-brand-purple hover:bg-opacity-95 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all" ${!activeChatCollabId ? 'disabled' : ''}>
-               Send
-             </button>
+           <div class="p-3 border-t bg-white shrink-0">
+             <div class="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 rounded-full px-4 py-2 border border-slate-200/40 focus-within:ring-2 focus-within:ring-brand-purple focus-within:bg-white transition-all shadow-sm">
+               <input type="text" id="chat-pane-input" class="flex-1 bg-transparent border-none text-xs focus:outline-none placeholder-slate-400 text-slate-800 dark:text-slate-100" placeholder="Type a message to study..." ${!activeChatCollabId ? 'disabled' : ''}>
+               <button onclick="sendChatMessage()" class="text-brand-purple hover:text-indigo-700 transition-all disabled:opacity-30 disabled:pointer-events-none p-1 shrink-0" ${!activeChatCollabId ? 'disabled' : ''} title="Send Message">
+                 <svg class="w-5 h-5 transform rotate-90" fill="currentColor" viewBox="0 0 20 20"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"></path></svg>
+               </button>
+             </div>
            </div>
          </div>
 
