@@ -864,6 +864,7 @@ async function sendOTPMail(email, otp, subject, bodyText) {
       },
       // Force connection to resolve using IPv4 only (bypasses Render IPv6 issue)
       connectionTimeout: 10000,
+      family: 4, // Force IPv4 only
       tls: {
         rejectUnauthorized: false
       }
