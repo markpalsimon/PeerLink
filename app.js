@@ -4449,12 +4449,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         <div class="bg-white border rounded-2xl p-6 shadow-sm space-y-4">
           <h3 class="font-heading font-bold text-slate-800 border-b pb-3">Change Account Password</h3>
           <form onsubmit="changeUserPassword(event)" id="change-pw-form" class="space-y-3 text-xs">
-            ${currentUser.id !== 'admin' ? `
-              <div>
-                <label class="block font-semibold text-slate-700 mb-1">Current Password</label>
-                <input type="password" id="set-curr-pw" class="w-full border rounded-lg px-3 py-2 text-xs focus:outline-none" placeholder="••••••••" required>
-              </div>
-            ` : ''}
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Current Password</label>
+              <input type="password" id="set-curr-pw" class="w-full border rounded-lg px-3 py-2 text-xs focus:outline-none" placeholder="••••••••" required>
+            </div>
             <div class="grid grid-cols-2 gap-4">
               <div>
                 <label class="block font-semibold text-slate-700 mb-1">New Password</label>
