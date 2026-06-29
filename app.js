@@ -2842,28 +2842,36 @@ document.addEventListener("DOMContentLoaded", async () => {
 
           <!-- Video grid templates -->
           ${isVoice ? `
-            <div class="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/40 backdrop-blur-2xl p-6 z-10 w-full h-full">
+            <div class="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-slate-950 via-indigo-950/30 to-slate-950 p-6 z-10 w-full h-full">
               <!-- Blurred Avatar Background -->
-              <div class="absolute inset-0 z-0 opacity-10 overflow-hidden">
+              <div class="absolute inset-0 z-0 overflow-hidden">
                 ${partner && partner.avatar && partner.avatar.startsWith('data:image') 
-                  ? `<img src="${partner.avatar}" class="w-full h-full object-cover blur-3xl scale-125" alt="blur-bg" />` 
-                  : `<div class="w-full h-full bg-gradient-to-tr from-indigo-900 to-slate-900"></div>`}
+                  ? `<img src="${partner.avatar}" class="w-full h-full object-cover blur-3xl scale-150 opacity-10" alt="blur-bg" />` 
+                  : `<div class="w-full h-full bg-gradient-to-tr from-indigo-950 via-slate-950 to-slate-900"></div>`}
               </div>
               
               <!-- Centered Content -->
-              <div class="relative z-10 flex flex-col items-center justify-center text-center space-y-6">
-                <div class="relative">
-                  <div class="w-28 h-28 rounded-full bg-slate-800 border-4 border-indigo-500 shadow-2xl flex items-center justify-center text-6xl overflow-hidden animate-pulse">
-                    ${renderAvatar(partner ? partner.avatar : '👤', 'text-6xl', 'w-full h-full object-cover rounded-full')}
+              <div class="relative z-10 flex flex-col items-center justify-center text-center space-y-5">
+                <!-- Avatar with ring-pulse rings -->
+                <div class="relative flex items-center justify-center">
+                  <!-- Outer pulse rings -->
+                  <div class="absolute w-36 h-36 rounded-full border-2 border-indigo-400/30 animate-ping" style="animation-duration: 2s;"></div>
+                  <div class="absolute w-44 h-44 rounded-full border border-indigo-400/15 animate-ping" style="animation-duration: 2.5s; animation-delay: 0.4s;"></div>
+                  <!-- Avatar circle -->
+                  <div class="relative w-28 h-28 rounded-full bg-indigo-900 border-4 border-indigo-400 shadow-2xl shadow-indigo-500/30 flex items-center justify-center text-5xl overflow-hidden z-10">
+                    ${renderAvatar(partner ? partner.avatar : '👤', 'text-5xl', 'w-full h-full object-cover rounded-full')}
                   </div>
-                  <div class="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-emerald-500 border-2 border-white animate-ping"></div>
+                  <!-- Online dot -->
+                  <div class="absolute bottom-1 right-1 w-5 h-5 rounded-full bg-emerald-500 border-2 border-slate-950 z-20"></div>
                 </div>
+                <!-- Name & Status -->
                 <div>
                   <h4 class="font-heading font-extrabold text-2xl text-white tracking-wide">${partner ? partner.name : 'Study Partner'}</h4>
-                  <p class="text-sm text-slate-400 mt-1">${partner ? partner.yearSection : ''}</p>
+                  <p class="text-sm text-slate-400 mt-0.5">${partner ? partner.yearSection : ''}</p>
                 </div>
-                <div class="bg-black/40 backdrop-blur px-4 py-1.5 rounded-full text-xs font-mono tracking-widest text-emerald-400 font-semibold border border-white/5 animate-pulse">
-                  SPEAKING / CONNECTED
+                <!-- Status pill -->
+                <div class="bg-emerald-500/10 border border-emerald-500/30 px-5 py-1.5 rounded-full text-xs font-mono tracking-widest text-emerald-400 font-semibold">
+                  ● CONNECTED
                 </div>
               </div>
             </div>
@@ -2891,7 +2899,6 @@ document.addEventListener("DOMContentLoaded", async () => {
               </div>
             </div>
           `}
-        </div>
         </div>
 
         <!-- Sidebar Panel (Right Column) -->
@@ -2958,18 +2965,38 @@ document.addEventListener("DOMContentLoaded", async () => {
       </div>
 
       <!-- Footer controls bar -->
-      <div class="flex justify-center items-center gap-4 shrink-0 pt-4 border-t border-slate-900/60 relative z-20">
-        <button onclick="toggleMute()" id="call-btn-mute" class="w-12 h-12 rounded-full bg-slate-800/80 hover:bg-slate-700 backdrop-blur flex items-center justify-center text-lg border border-slate-700 transition-all active:scale-95 text-white" title="Mute Mic">🎙️</button>
+      <div class="flex justify-center items-center gap-3 sm:gap-5 shrink-0 pt-3 border-t border-slate-900/60 relative z-20 pb-1">
+        <!-- Mute btn -->
+        <div class="flex flex-col items-center gap-1">
+          <button onclick="toggleMute()" id="call-btn-mute" class="w-12 h-12 rounded-full bg-slate-800/90 hover:bg-slate-700 backdrop-blur flex items-center justify-center text-lg border border-slate-700 transition-all active:scale-90 text-white shadow-lg" title="Mute Mic">🎙️</button>
+          <span class="text-[9px] text-slate-500 font-medium">Mute</span>
+        </div>
         ${!isVoice ? `
-          <button onclick="toggleCamera()" id="call-btn-cam" class="w-12 h-12 rounded-full bg-slate-800/80 hover:bg-slate-700 backdrop-blur flex items-center justify-center text-lg border border-slate-700 transition-all active:scale-95 text-white" title="Stop Cam">📹</button>
-          <button onclick="toggleScreenShare()" id="call-btn-share" class="w-12 h-12 rounded-full bg-slate-800/80 hover:bg-slate-700 backdrop-blur flex items-center justify-center text-lg border border-slate-700 transition-all active:scale-95 text-white" title="Share Screen">🖥️</button>
+          <!-- Camera btn -->
+          <div class="flex flex-col items-center gap-1">
+            <button onclick="toggleCamera()" id="call-btn-cam" class="w-12 h-12 rounded-full bg-slate-800/90 hover:bg-slate-700 backdrop-blur flex items-center justify-center text-lg border border-slate-700 transition-all active:scale-90 text-white shadow-lg" title="Stop Cam">📹</button>
+            <span class="text-[9px] text-slate-500 font-medium">Camera</span>
+          </div>
+          <!-- Share btn -->
+          <div class="flex flex-col items-center gap-1">
+            <button onclick="toggleScreenShare()" id="call-btn-share" class="w-12 h-12 rounded-full bg-slate-800/90 hover:bg-slate-700 backdrop-blur flex items-center justify-center text-lg border border-slate-700 transition-all active:scale-90 text-white shadow-lg" title="Share Screen">🖥️</button>
+            <span class="text-[9px] text-slate-500 font-medium">Share</span>
+          </div>
         ` : ''}
         ${isHost ? `
-          <button onclick="endVideoCallForEveryone()" class="px-5 py-3 rounded-full bg-red-900/80 hover:bg-red-800 border border-red-700 flex items-center justify-center text-xs font-bold text-red-200 transition-all active:scale-95 shadow-lg" title="End for Everyone">End All</button>
+          <!-- End for all btn -->
+          <div class="flex flex-col items-center gap-1">
+            <button onclick="endVideoCallForEveryone()" class="w-12 h-12 rounded-full bg-red-900/80 hover:bg-red-800 border border-red-700 flex items-center justify-center text-base font-bold text-red-200 transition-all active:scale-90 shadow-lg" title="End for Everyone">⛔</button>
+            <span class="text-[9px] text-red-500 font-medium">End All</span>
+          </div>
         ` : ''}
-        <button onclick="endVideoCall()" class="w-12 h-12 rounded-full bg-red-600 hover:bg-red-500 flex items-center justify-center text-lg transition-all active:scale-95 shadow-lg text-white font-bold" title="End Call">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="transform: rotate(135deg);"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
-        </button>
+        <!-- End call btn (always visible, prominently) -->
+        <div class="flex flex-col items-center gap-1">
+          <button onclick="endVideoCall()" class="w-14 h-14 rounded-full bg-red-600 hover:bg-red-500 flex items-center justify-center transition-all active:scale-90 shadow-xl shadow-red-600/30 text-white" title="End Call">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="transform: rotate(135deg);"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
+          </button>
+          <span class="text-[9px] text-red-400 font-medium">End</span>
+        </div>
       </div>
     `;
 
@@ -3674,80 +3701,95 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // If layout does not exist, do a full initial render of the structure
     sysPanes.messages.innerHTML = `
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch h-[600px]">
+      <div id="chat-layout-grid" class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 items-stretch" style="height: min(600px, calc(100dvh - 9rem))">
         
          <!-- Left Panel: Chat List -->
-         <div class="bg-white border rounded-2xl p-4 flex flex-col justify-between overflow-hidden shadow-sm">
-           <div>
-             <h3 class="font-heading font-bold text-slate-800 mb-4 pb-2 border-b">Study Rooms</h3>
-             <div class="space-y-1.5 overflow-y-auto max-h-[480px]">
-               ${partners.map(p => {
-                 const isActive = p.id === activeChatCollabId;
-                 const room = chats.find(c => c.roomId === `${currentUser.id}_${p.id}` || c.roomId === `${p.id}_${currentUser.id}`);
-                 const lastText = room && room.messages.length > 0 ? room.messages[room.messages.length - 1].text : "No messages yet";
-                 return `
-                   <div id="chat-list-item-${p.id}" onclick="selectActiveChat('${p.id}')" class="flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all border ${isActive ? 'bg-indigo-50/50 border-indigo-100 font-semibold' : 'border-transparent hover:bg-slate-50'}">
-                     <div class="text-xl w-8 h-8 rounded-full bg-slate-100 border flex items-center justify-center overflow-hidden">${renderAvatar(p.avatar, 'text-xl', 'w-full h-full object-cover rounded-full')}</div>
-                     <div class="overflow-hidden flex-1">
-                       <h4 class="text-xs text-slate-800 truncate">${p.name}</h4>
-                       <p class="text-[10px] text-slate-400 truncate chat-list-last-text">${lastText}</p>
-                     </div>
+         <div id="chat-list-panel" class="bg-white border rounded-2xl flex flex-col overflow-hidden shadow-sm">
+           <div class="px-4 pt-4 pb-2 border-b shrink-0">
+             <h3 class="font-heading font-bold text-slate-800 text-sm">Study Rooms</h3>
+             <p class="text-[10px] text-slate-400 mt-0.5">${partners.length} connections</p>
+           </div>
+           <div class="flex-1 overflow-y-auto py-2 px-2 space-y-1">
+             ${partners.map(p => {
+               const isActive = p.id === activeChatCollabId;
+               const room = chats.find(c => c.roomId === `${currentUser.id}_${p.id}` || c.roomId === `${p.id}_${currentUser.id}`);
+               const lastText = room && room.messages.length > 0 ? room.messages[room.messages.length - 1].text : "Say hello!";
+               const lastMsg = room && room.messages.length > 0 ? room.messages[room.messages.length - 1] : null;
+               const lastTime = lastMsg ? lastMsg.time : '';
+               return `
+                 <div id="chat-list-item-${p.id}" onclick="selectActiveChat('${p.id}')" class="flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-all border ${isActive ? 'bg-indigo-50 border-indigo-100' : 'border-transparent hover:bg-slate-50'} group">
+                   <div class="relative shrink-0">
+                     <div class="w-9 h-9 rounded-full bg-slate-100 border flex items-center justify-center overflow-hidden text-lg">${renderAvatar(p.avatar, 'text-lg', 'w-full h-full object-cover rounded-full')}</div>
                    </div>
-                 `;
-               }).join('')}
-             </div>
+                   <div class="overflow-hidden flex-1 min-w-0">
+                     <h4 class="text-xs font-semibold text-slate-800 truncate ${isActive ? 'text-indigo-700' : ''}">${p.name}</h4>
+                     <p class="text-[10px] text-slate-400 truncate chat-list-last-text">${lastText}</p>
+                   </div>
+                   <span class="text-[9px] text-slate-400 shrink-0">${lastTime}</span>
+                 </div>
+               `;
+             }).join('')}
+             ${partners.length === 0 ? `<div class="p-8 text-center text-xs text-slate-400">No accepted connections yet.<br>Connect with peers first.</div>` : ''}
            </div>
          </div>
 
          <!-- Right 2 Panels: Conversations -->
-         <div class="md:col-span-2 bg-white border rounded-2xl flex flex-col justify-between overflow-hidden shadow-sm">
+         <div id="chat-conv-panel" class="md:col-span-2 bg-white border rounded-2xl flex flex-col justify-between overflow-hidden shadow-sm">
            <!-- Chat header -->
-           <div class="px-6 py-4 border-b flex justify-between items-center bg-slate-50/50 shrink-0">
-             <div>
-               <h4 class="font-bold text-sm text-slate-800" id="chat-header-partner-name">${activePartnerObj ? activePartnerObj.name : 'Select Chat'}</h4>
-               <p class="text-[10px] text-slate-400" id="chat-header-partner-section">${activePartnerObj ? activePartnerObj.yearSection : ''}</p>
+           <div class="px-4 py-3 border-b flex items-center gap-3 bg-slate-50/80 shrink-0">
+             <!-- Mobile back button -->
+             <button class="md:hidden w-8 h-8 rounded-full flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-600 shrink-0" onclick="document.getElementById('chat-list-panel').style.display=''; document.getElementById('chat-conv-panel').style.display='none';" title="Back">
+               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
+             </button>
+             <!-- Partner avatar + name -->
+             <div class="flex items-center gap-2.5 flex-1 min-w-0">
+               <div class="w-8 h-8 rounded-full bg-slate-200 border overflow-hidden flex items-center justify-center text-base shrink-0">${renderAvatar(activePartnerObj ? activePartnerObj.avatar : null, 'text-base', 'w-full h-full object-cover rounded-full')}</div>
+               <div class="min-w-0">
+                 <h4 class="font-bold text-sm text-slate-800 truncate" id="chat-header-partner-name">${activePartnerObj ? activePartnerObj.name : 'Select a conversation'}</h4>
+                 <p class="text-[10px] text-slate-400" id="chat-header-partner-section">${activePartnerObj ? activePartnerObj.yearSection : ''}</p>
+               </div>
              </div>
-             <div class="flex items-center gap-1.5">
-               <!-- Voice Call Button -->
-               <button id="chat-header-voice-btn" onclick="startVoiceCall('${activeChatCollabId}')" class="text-xs font-bold text-slate-700 border hover:bg-slate-100 p-2 rounded-lg transition-colors flex items-center gap-1" title="Voice Call">
-                 📞 Voice
+             <!-- Action buttons -->
+             <div class="flex items-center gap-1 shrink-0">
+               <button id="chat-header-voice-btn" onclick="startVoiceCall('${activeChatCollabId}')" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-600 hover:bg-slate-100 border border-transparent hover:border-slate-200 transition-colors" title="Voice Call">
+                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
                </button>
-               <!-- Video Call Button -->
-               <button id="chat-header-video-btn" onclick="startVideoCall('${activeChatCollabId}')" class="text-xs font-bold text-slate-700 border hover:bg-slate-100 p-2 rounded-lg transition-colors flex items-center gap-1" title="Video Call">
-                 📹 Video
+               <button id="chat-header-video-btn" onclick="startVideoCall('${activeChatCollabId}')" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-600 hover:bg-slate-100 border border-transparent hover:border-slate-200 transition-colors" title="Video Call">
+                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.723v6.554a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
                </button>
-               <button id="chat-header-schedule-btn" onclick="scheduleMeetingWith('${activeChatCollabId}')" class="text-xs font-bold text-brand-purple border border-indigo-100 bg-indigo-50/40 hover:bg-indigo-50 px-3 py-2 rounded-lg transition-colors">
-                 📅 Schedule
+               <button id="chat-header-schedule-btn" onclick="scheduleMeetingWith('${activeChatCollabId}')" class="w-8 h-8 rounded-full flex items-center justify-center text-indigo-600 hover:bg-indigo-50 border border-transparent hover:border-indigo-100 transition-colors" title="Schedule Meeting">
+                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                </button>
              </div>
            </div>
 
            <!-- Chat body messages -->
-           <div class="flex-1 overflow-y-auto p-6 space-y-4" id="chat-messages-container" data-msg-count="${messagesList.length}">
+           <div class="flex-1 overflow-y-auto px-4 py-4 space-y-3" id="chat-messages-container" data-msg-count="${messagesList.length}">
              ${messagesList.map(m => {
                const isMe = m.senderId === currentUser.id;
                return `
-                 <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'} space-y-1">
-                   <div class="px-4 py-2.5 rounded-2xl text-xs max-w-sm ${isMe ? 'bg-brand-purple text-white rounded-br-none' : 'bg-slate-100 text-slate-800 rounded-bl-none'}">
+                 <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'} space-y-0.5">
+                   <div class="px-3.5 py-2 rounded-2xl text-xs max-w-[75%] ${isMe ? 'bg-indigo-600 text-white rounded-br-sm' : 'bg-slate-100 text-slate-800 rounded-bl-sm'}">
                      ${m.text}
                    </div>
-                   <span class="text-[9px] text-slate-400 px-1">${isMe ? 'You' : m.senderName} • ${m.time}</span>
+                   <span class="text-[9px] text-slate-400 px-1">${isMe ? 'You' : m.senderName} · ${m.time}</span>
                  </div>
                `;
              }).join('')}
              ${messagesList.length === 0 ? `
-               <div class="p-12 text-center text-slate-400 text-xs">
-                 No messages. Say hello to start collaborating!
+               <div class="flex flex-col items-center justify-center h-full text-center text-slate-400 py-12 gap-3">
+                 <div class="text-4xl">💬</div>
+                 <p class="text-xs">No messages yet. Say hi!</p>
                </div>
              ` : ''}
            </div>
 
            <!-- Chat inputs -->
            <div class="p-3 border-t bg-white shrink-0">
-             <div class="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 rounded-full px-4 py-2 border border-slate-200/40 focus-within:ring-2 focus-within:ring-brand-purple focus-within:bg-white transition-all shadow-sm">
-               <input type="text" id="chat-pane-input" class="flex-1 bg-transparent border-none text-xs focus:outline-none placeholder-slate-400 text-slate-800 dark:text-slate-100" placeholder="Type a message to study..." ${!activeChatCollabId ? 'disabled' : ''}>
-               <button onclick="sendChatMessage()" class="text-brand-purple hover:text-indigo-700 transition-all disabled:opacity-30 disabled:pointer-events-none p-1 shrink-0" ${!activeChatCollabId ? 'disabled' : ''} title="Send Message">
-                 <svg class="w-5 h-5 transform rotate-90" fill="currentColor" viewBox="0 0 20 20"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"></path></svg>
+             <div class="flex items-center gap-2 bg-slate-100 rounded-full px-4 py-2.5 border border-slate-200/60 focus-within:ring-2 focus-within:ring-indigo-400 focus-within:bg-white transition-all">
+               <input type="text" id="chat-pane-input" class="flex-1 bg-transparent border-none text-xs focus:outline-none placeholder-slate-400 text-slate-800" placeholder="${activeChatCollabId ? 'Type a message...' : 'Select a conversation to start'}" ${!activeChatCollabId ? 'disabled' : ''}>
+               <button onclick="sendChatMessage()" class="w-7 h-7 rounded-full flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 transition-colors disabled:opacity-30 disabled:pointer-events-none shrink-0" ${!activeChatCollabId ? 'disabled' : ''} title="Send">
+                 <svg class="w-3.5 h-3.5 text-white transform rotate-90" fill="currentColor" viewBox="0 0 20 20"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"></path></svg>
                </button>
              </div>
            </div>
@@ -3772,6 +3814,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   window.selectActiveChat = function(partnerId) {
     activeChatCollabId = partnerId;
     renderMessagesPane();
+    // On mobile: hide list panel, show conversation panel
+    if (window.innerWidth < 768) {
+      const listPanel = document.getElementById('chat-list-panel');
+      const convPanel = document.getElementById('chat-conv-panel');
+      if (listPanel) listPanel.style.display = 'none';
+      if (convPanel) convPanel.style.display = '';
+    }
   };
 
   window.sendChatMessage = async function() {
