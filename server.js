@@ -871,8 +871,49 @@ async function sendOTPMail(email, otp, subject, bodyText) {
     </div>
   `;
 
-  // Option 1: Use Resend API if API Key is configured (Best for Render production)
-  if (process.env.RESEND_API_KEY) {
+  // Option 1: Use Mailersend API if configured (using key starting with mlsn.)
+  const mailersendKey = process.env.MAILERSEND_API_KEY || process.env.RESEND_API_KEY;
+  if (mailersendKey && mailersendKey.startsWith('mlsn.')) {
+    try {
+      // Mailersend free tier default test domain info
+      // Free accounts can send to their registered account emails using sandbox domains
+      const response = await fetch('https://api.mailersend.com/v1/email', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${mailersendKey}`,
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+          from: {
+            email: 'MS_Xm68k5@trial-ynrwg1pd7p842k7d.mlsender.net', // Default Mailersend sandbox sender
+            name: 'PeerLink'
+          },
+          to: [
+            {
+              email: email,
+              name: email.split('@')[0]
+            }
+          ],
+          subject: subject,
+          text: `${bodyText}\n\nVerification Code: ${otp}`,
+          html: htmlContent
+        })
+      });
+      if (response.ok) {
+        console.log(`[OTP] Email successfully sent to ${email} via Mailersend API`);
+        return;
+      } else {
+        const text = await response.text();
+        console.error(`[OTP] Mailersend API error:`, text);
+      }
+    } catch (mailersendErr) {
+      console.error(`[OTP] Mailersend HTTP request failed:`, mailersendErr.message);
+    }
+  }
+
+  // Option 1.5: Use Resend API if API Key is configured
+  if (process.env.RESEND_API_KEY && !process.env.RESEND_API_KEY.startsWith('mlsn.')) {
     try {
       const response = await fetch('https://api.resend.com/emails', {
         method: 'POST',
@@ -881,7 +922,7 @@ async function sendOTPMail(email, otp, subject, bodyText) {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          from: 'PeerLink <onboarding@resend.dev>', // Free tier default sandbox sender
+          from: 'PeerLink <onboarding@resend.dev>',
           to: email,
           subject: subject,
           html: htmlContent
