@@ -1,0 +1,16 @@
+# Environment variables - NEVER commit these
+.env
+
+# Node modules - too large for git
+node_modules/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
