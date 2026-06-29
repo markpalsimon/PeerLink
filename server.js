@@ -855,10 +855,17 @@ async function sendOTPMail(email, otp, subject, bodyText) {
 
   try {
     const transporter = nodemailer.createTransport({
-      service: 'gmail',
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true, // Use SSL/TLS
       auth: {
         user: emailUser,
         pass: emailPass
+      },
+      // Force connection to resolve using IPv4 only (bypasses Render IPv6 issue)
+      connectionTimeout: 10000,
+      tls: {
+        rejectUnauthorized: false
       }
     });
 
