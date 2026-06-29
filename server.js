@@ -855,16 +855,56 @@ app.post('/api/meetings', async (req, res) => {
 const otpStore = {};            // DEPRECATED: kept for safety, now using DB
 const pendingRegistrations = {}; // DEPRECATED: kept for safety, now using DB
 
-// Helper function to send OTP email via Gmail SMTP
+// Helper function to send OTP email via Resend API (HTTP) or Gmail SMTP
 async function sendOTPMail(email, otp, subject, bodyText) {
   console.log(`[OTP] Code for ${email}: ${otp}`);
 
-  // Gmail credentials from env (set on Render dashboard)
+  const htmlContent = `
+    <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:24px;border:1px solid #e2e8f0;border-radius:12px;">
+      <h2 style="color:#6366f1;margin-bottom:8px;">PeerLink</h2>
+      <p style="color:#334155;">${bodyText}</p>
+      <div style="background:#f1f5f9;border-radius:8px;padding:20px;text-align:center;margin:24px 0;">
+        <p style="margin:0;font-size:12px;color:#64748b;">Your Verification Code</p>
+        <p style="margin:8px 0 0;font-size:36px;font-weight:bold;letter-spacing:8px;color:#6366f1;">${otp}</p>
+      </div>
+      <p style="font-size:12px;color:#94a3b8;">This code expires in 10 minutes.</p>
+    </div>
+  `;
+
+  // Option 1: Use Resend API if API Key is configured (Best for Render production)
+  if (process.env.RESEND_API_KEY) {
+    try {
+      const response = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          from: 'PeerLink <onboarding@resend.dev>', // Free tier default sandbox sender
+          to: email,
+          subject: subject,
+          html: htmlContent
+        })
+      });
+      const data = await response.json();
+      if (response.ok) {
+        console.log(`[OTP] Email successfully sent to ${email} via Resend API`);
+        return;
+      } else {
+        console.error(`[OTP] Resend API error:`, data.message || JSON.stringify(data));
+      }
+    } catch (resendErr) {
+      console.error(`[OTP] Resend HTTP request failed:`, resendErr.message);
+    }
+  }
+
+  // Option 2: Fallback to Gmail SMTP (Good for local development)
   const emailUser = process.env.EMAIL_USER || 'vincentpalsi02@gmail.com';
   const emailPass = process.env.EMAIL_PASS || 'ksir dbel skpv fdag'; // ← spaces required for Gmail App Password
 
   if (!emailUser || !emailPass) {
-    console.log('[OTP] EMAIL_USER or EMAIL_PASS not set — OTP printed above only.');
+    console.log('[OTP] EMAIL_USER or EMAIL_PASS not set — SMTP fallback skipped.');
     return;
   }
 
@@ -877,9 +917,8 @@ async function sendOTPMail(email, otp, subject, bodyText) {
         user: emailUser,
         pass: emailPass
       },
-      // Force connection to resolve using IPv4 only (bypasses Render IPv6 issue)
       connectionTimeout: 10000,
-      family: 4, // Force IPv4 only
+      family: 4, // Force IPv4
       tls: {
         rejectUnauthorized: false
       }
@@ -889,25 +928,14 @@ async function sendOTPMail(email, otp, subject, bodyText) {
       from: `"PeerLink" <${emailUser}>`,
       to: email,
       subject: subject,
-      text: `${bodyText}\n\nVerification Code: ${otp}\n\nThis code expires in 10 minutes. If you did not request this, please ignore this email.`,
-      html: `
-        <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:24px;border:1px solid #e2e8f0;border-radius:12px;">
-          <h2 style="color:#6366f1;margin-bottom:8px;">PeerLink</h2>
-          <p style="color:#334155;">${bodyText}</p>
-          <div style="background:#f1f5f9;border-radius:8px;padding:20px;text-align:center;margin:24px 0;">
-            <p style="margin:0;font-size:12px;color:#64748b;">Your Verification Code</p>
-            <p style="margin:8px 0 0;font-size:36px;font-weight:bold;letter-spacing:8px;color:#6366f1;">${otp}</p>
-          </div>
-          <p style="font-size:12px;color:#94a3b8;">This code expires in 10 minutes.</p>
-        </div>
-      `
+      text: `${bodyText}\n\nVerification Code: ${otp}`,
+      html: htmlContent
     };
 
     await transporter.sendMail(mailOptions);
-    console.log(`[OTP] Email successfully sent to ${email}`);
+    console.log(`[OTP] Email successfully sent to ${email} via SMTP`);
   } catch (err) {
-    console.error(`[OTP] Failed to send email to ${email}:`, err.message);
-    // DO NOT throw — the OTP is already stored in DB so the user can still try manually
+    console.error(`[OTP] Failed to send email to ${email} via SMTP:`, err.message);
   }
 }
 
