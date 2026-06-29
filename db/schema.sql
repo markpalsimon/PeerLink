@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash VARCHAR(255) DEFAULT NULL,
   program       VARCHAR(20) NOT NULL DEFAULT 'BSIT',
   year_section  VARCHAR(30) NOT NULL DEFAULT '',
-  avatar        VARCHAR(10) DEFAULT '👤',
+  avatar        TEXT DEFAULT '👤',
   bio           TEXT DEFAULT '',
   birthday      VARCHAR(50) DEFAULT '',
   address       VARCHAR(255) DEFAULT '',

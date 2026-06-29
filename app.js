@@ -294,49 +294,65 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     }
 
-    // Restore registration progress if page was refreshed while registering
-    const savedRegStep = localStorage.getItem("peerlink_registration_step");
-    const savedRegData = localStorage.getItem("peerlink_registration_data");
-    if (savedRegStep && savedRegData) {
-      try {
-        registrationStep = parseInt(savedRegStep);
-        regData = JSON.parse(savedRegData);
-        showPublicView("register");
-        
-        // Populate inputs on step 1 if values exist in restored data
-        if (regData.name) {
-          const nameInput = document.getElementById("reg-name");
-          if (nameInput) nameInput.value = regData.name;
+    // Restore last active public view on refresh
+    const savedPublicView = localStorage.getItem("peerlink_active_public_view");
+    if (savedPublicView) {
+      if (savedPublicView === "register") {
+        const savedRegStep = localStorage.getItem("peerlink_registration_step");
+        const savedRegData = localStorage.getItem("peerlink_registration_data");
+        if (savedRegStep && savedRegData) {
+          try {
+            registrationStep = parseInt(savedRegStep);
+            regData = JSON.parse(savedRegData);
+            showPublicView("register");
+            
+            // Populate inputs on step 1 if values exist in restored data
+            if (regData.name) {
+              const nameInput = document.getElementById("reg-name");
+              if (nameInput) nameInput.value = regData.name;
+            }
+            if (regData.studentId) {
+              const studentIdInput = document.getElementById("reg-student-id");
+              if (studentIdInput) studentIdInput.value = regData.studentId;
+            }
+            if (regData.email) {
+              const emailInput = document.getElementById("reg-email");
+              if (emailInput) emailInput.value = regData.email;
+              const emailLabel = document.getElementById('reg-otp-email-label');
+              if (emailLabel) emailLabel.textContent = regData.email;
+            }
+            if (regData.password) {
+              const passwordInput = document.getElementById("reg-password");
+              const confirmInput = document.getElementById("reg-password-confirm");
+              if (passwordInput) passwordInput.value = regData.password;
+              if (confirmInput) confirmInput.value = regData.password;
+            }
+            if (regData.program) {
+              const programSelect = document.getElementById("reg-program");
+              if (programSelect) programSelect.value = regData.program;
+            }
+            if (regData.yearLevel) {
+              const yearSelect = document.getElementById("reg-year");
+              if (yearSelect) yearSelect.value = regData.yearLevel;
+            }
+            
+            renderRegWizard();
+            return;
+          } catch (e) {
+            console.warn("Failed to restore registration state:", e);
+          }
         }
-        if (regData.studentId) {
-          const studentIdInput = document.getElementById("reg-student-id");
-          if (studentIdInput) studentIdInput.value = regData.studentId;
+      } else {
+        showPublicView(savedPublicView);
+        // If they refreshed on a scrolled section (Features, How it works, About)
+        const savedSection = localStorage.getItem("peerlink_active_public_section");
+        if (savedSection && savedPublicView === 'landing') {
+          requestAnimationFrame(() => requestAnimationFrame(() => {
+            const element = document.getElementById(savedSection);
+            if (element) element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }));
         }
-        if (regData.email) {
-          const emailInput = document.getElementById("reg-email");
-          if (emailInput) emailInput.value = regData.email;
-          const emailLabel = document.getElementById('reg-otp-email-label');
-          if (emailLabel) emailLabel.textContent = regData.email;
-        }
-        if (regData.password) {
-          const passwordInput = document.getElementById("reg-password");
-          const confirmInput = document.getElementById("reg-password-confirm");
-          if (passwordInput) passwordInput.value = regData.password;
-          if (confirmInput) confirmInput.value = regData.password;
-        }
-        if (regData.program) {
-          const programSelect = document.getElementById("reg-program");
-          if (programSelect) programSelect.value = regData.program;
-        }
-        if (regData.yearLevel) {
-          const yearSelect = document.getElementById("reg-year");
-          if (yearSelect) yearSelect.value = regData.yearLevel;
-        }
-        
-        renderRegWizard();
         return;
-      } catch (e) {
-        console.warn("Failed to restore registration state:", e);
       }
     }
     
@@ -345,6 +361,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   window.showPublicView = function(viewId) {
     activePublicView = viewId;
+    localStorage.setItem("peerlink_active_public_view", viewId);
+    if (viewId !== 'landing') {
+      localStorage.removeItem("peerlink_active_public_section");
+    }
     pubContainer.classList.remove("hidden");
     sysContainer.classList.add("hidden");
     publicHeader.classList.remove("hidden");
@@ -377,6 +397,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   };
 
   window.scrollToSection = function(sectionId) {
+    localStorage.setItem("peerlink_active_public_section", sectionId);
     // If the public container is visible and landing is active, just scroll
     if (activePublicView === 'landing' && !pubContainer.classList.contains('hidden')) {
       const element = document.getElementById(sectionId);
@@ -501,9 +522,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     localStorage.setItem("peerlink_session_user", user.id);
     
     // Set Sidebar User Details
-    document.getElementById("side-avatar").textContent = user.avatar || "👤";
-    document.getElementById("side-username").textContent = user.name;
-    document.getElementById("side-program").textContent = `${user.yearSection} • ${user.program}`;
+    const sideAvatarEl = document.getElementById('side-avatar');
+    if (sideAvatarEl) {
+      if (user.avatar && user.avatar.startsWith('data:image')) {
+        sideAvatarEl.innerHTML = `<img src="${user.avatar}" class="w-10 h-10 object-cover rounded-full" alt="avatar" />`;
+      } else {
+        sideAvatarEl.innerHTML = user.avatar || '👤';
+      }
+    }
+    document.getElementById('side-username').textContent = user.name;
+    document.getElementById('side-program').textContent = `${user.yearSection} • ${user.program}`;
 
     // Toggle navigation panels
     document.getElementById("student-nav").classList.remove("hidden");
@@ -520,9 +548,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     currentUser.role = 'admin'; // Ensure the role is explicitly 'admin' for navigation toggles
     localStorage.setItem("peerlink_session_user", currentUser.id);
 
-    document.getElementById("side-avatar").textContent = currentUser.avatar || "🛡️";
-    document.getElementById("side-username").textContent = currentUser.name || "System Administrator";
-    document.getElementById("side-program").textContent = currentUser.yearSection && currentUser.program ? `${currentUser.yearSection} • ${currentUser.program}` : "System Overseer";
+    const sideAvatarElAdmin = document.getElementById('side-avatar');
+    if (sideAvatarElAdmin) {
+      if (currentUser.avatar && currentUser.avatar.startsWith('data:image')) {
+        sideAvatarElAdmin.innerHTML = `<img src="${currentUser.avatar}" class="w-10 h-10 object-cover rounded-full" alt="avatar" />`;
+      } else {
+        sideAvatarElAdmin.innerHTML = currentUser.avatar || '🛡️';
+      }
+    }
+    document.getElementById('side-username').textContent = currentUser.name || 'System Administrator';
+    document.getElementById('side-program').textContent = currentUser.yearSection && currentUser.program ? `${currentUser.yearSection} • ${currentUser.program}` : 'System Overseer';
 
     // Toggle navigation panels
     document.getElementById("student-nav").classList.add("hidden");
@@ -1479,10 +1514,10 @@ document.addEventListener("DOMContentLoaded", async () => {
                 <h3 class="font-heading font-bold text-slate-800">Top Study Partners</h3>
                 <span class="text-xs font-bold text-brand-purple hover:underline cursor-pointer" onclick="showSystemView('matches')">View All</span>
               </div>
-              <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div class="grid grid-cols-2 sm:grid-cols-3 keep-2col gap-4">
                 ${recs.slice(0, 3).map(r => `
                   <div class="bg-slate-50 hover:bg-slate-100/80 border rounded-xl p-4 text-center cursor-pointer transition-all" onclick="openPartnerProfile('${r.candidate.id}')">
-                    <div class="text-3xl mb-2">${r.candidate.avatar || '👤'}</div>
+                    <div class="w-12 h-12 rounded-full bg-slate-100 border-2 border-indigo-100 flex items-center justify-center text-3xl overflow-hidden mb-2 mx-auto">${renderAvatar(r.candidate.avatar, 'text-3xl', 'w-full h-full object-cover rounded-full')}</div>
                     <h4 class="font-semibold text-slate-800 text-xs truncate">${r.candidate.name}</h4>
                     <p class="text-[10px] text-slate-400 truncate">${r.candidate.yearSection}</p>
                     <span class="inline-block bg-indigo-50 border border-indigo-100 text-brand-purple text-[10px] font-bold px-2 py-0.5 rounded-full mt-2">${r.match.total}% Match</span>
@@ -1746,7 +1781,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           <td class="p-4 pl-6">
             <div class="flex items-center gap-3">
               <div class="relative">
-                <div class="text-2xl w-10 h-10 rounded-full bg-slate-100 border flex items-center justify-center">${p.avatar || '👤'}</div>
+                <div class="text-2xl w-10 h-10 rounded-full bg-slate-100 border flex items-center justify-center overflow-hidden">${renderAvatar(p.avatar, 'text-2xl', 'w-full h-full object-cover rounded-full')}</div>
                 <div class="absolute -bottom-0.5 -right-0.5">${onlineBadge}</div>
               </div>
               <div>
@@ -2134,7 +2169,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
           </button>
           
-          <div class="text-4xl w-16 h-16 rounded-full bg-white border flex items-center justify-center shadow-inner shrink-0">${partner.avatar || '👤'}</div>
+          <div class="text-4xl w-16 h-16 rounded-full bg-white border flex items-center justify-center shadow-inner shrink-0 overflow-hidden">${renderAvatar(partner.avatar, 'text-4xl', 'w-full h-full object-cover rounded-full')}</div>
           <div class="space-y-1 pr-6">
             <h3 class="font-heading font-extrabold text-2xl text-slate-800">${partner.name}</h3>
             <p class="text-sm font-semibold text-indigo-600 flex items-center gap-1">
@@ -2786,13 +2821,13 @@ document.addEventListener("DOMContentLoaded", async () => {
             <div class="flex items-center justify-center gap-12 w-full h-full">
               <!-- You Voice Card -->
               <div class="flex flex-col items-center justify-center bg-slate-900 border border-slate-800 p-8 rounded-2xl w-48 shadow-lg">
-                <div class="text-5xl mb-4 w-20 h-20 bg-indigo-600/20 border border-indigo-500/40 rounded-full flex items-center justify-center animate-pulse">${currentUser.avatar || '👤'}</div>
+                <div class="text-5xl mb-4 w-20 h-20 bg-indigo-600/20 border border-indigo-500/40 rounded-full flex items-center justify-center animate-pulse overflow-hidden">${renderAvatar(currentUser.avatar, 'text-5xl', 'w-full h-full object-cover rounded-full')}</div>
                 <h5 class="text-xs font-bold">You</h5>
                 <p class="text-[10px] text-slate-500 mt-1">Connected</p>
               </div>
               <!-- Partner Voice Card -->
               <div class="flex flex-col items-center justify-center bg-slate-900 border border-slate-800 p-8 rounded-2xl w-48 shadow-lg">
-                <div class="text-5xl mb-4 w-20 h-20 bg-emerald-600/20 border border-emerald-500/40 rounded-full flex items-center justify-center animate-bounce">${partner ? partner.avatar : '👤'}</div>
+                <div class="text-5xl mb-4 w-20 h-20 bg-emerald-600/20 border border-emerald-500/40 rounded-full flex items-center justify-center animate-bounce overflow-hidden">${renderAvatar(partner ? partner.avatar : '👤', 'text-5xl', 'w-full h-full object-cover rounded-full')}</div>
                 <h5 class="text-xs font-bold">${partner ? partner.name : 'Partner'}</h5>
                 <p class="text-[10px] text-brand-teal mt-1 font-semibold">Speaking...</p>
               </div>
@@ -2804,7 +2839,7 @@ document.addEventListener("DOMContentLoaded", async () => {
               <div class="bg-slate-950 rounded-xl overflow-hidden relative border border-slate-800">
                 <video id="webcam-feed" class="w-full h-full object-cover" autoplay playsinline></video>
                 <div id="camera-placeholder" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-950 hidden">
-                  <span class="text-4xl mb-2">${currentUser.avatar || '👤'}</span>
+                  <div class="text-4xl mb-2 w-16 h-16 rounded-full overflow-hidden flex items-center justify-center">${renderAvatar(currentUser.avatar, 'text-4xl', 'w-full h-full object-cover rounded-full')}</div>
                   <p class="text-xs text-slate-500">Camera Stopped</p>
                 </div>
                 <div class="absolute bottom-3 left-3 bg-slate-950/80 px-2.5 py-1 rounded-md text-[10px] font-semibold">You</div>
@@ -2814,7 +2849,7 @@ document.addEventListener("DOMContentLoaded", async () => {
               <div class="bg-slate-950 rounded-xl overflow-hidden relative border border-slate-800">
                 <video id="remote-video-feed" class="w-full h-full object-cover hidden" autoplay playsinline></video>
                 <div id="remote-camera-placeholder" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-950">
-                  <span class="text-5xl mb-3 animate-bounce">${partner ? partner.avatar : '👤'}</span>
+                  <div class="text-5xl mb-3 animate-bounce w-16 h-16 rounded-full overflow-hidden flex items-center justify-center">${renderAvatar(partner ? partner.avatar : '👤', 'text-5xl', 'w-full h-full object-cover rounded-full')}</div>
                   <h5 class="text-sm font-semibold">${partner ? partner.name : 'Partner'}</h5>
                   <p class="text-xs text-slate-500 mt-1">Waiting for partner...</p>
                 </div>
@@ -3353,11 +3388,15 @@ document.addEventListener("DOMContentLoaded", async () => {
       meetingToEnd.meeting_type === 'voice' ||
       meetingToEnd.meeting_type === 'video'
     );
-    window.closeCallOverlay();
-    db.addLog("connection", `${currentUser.name} ended study call.`);
+    
+    // Check if the user is the actual host of the call/meeting
+    const isHost = meetingToEnd && String(meetingToEnd.host_id) === String(currentUser.id);
 
-    // If this was an instant call, delete the meeting so the other user is notified
-    if (meetingToEnd && (meetingToEnd.meeting_type === 'voice' || meetingToEnd.meeting_type === 'video' || meetingToEnd.meeting_type === 'Audio Call' || meetingToEnd.meeting_type === 'Video Call')) {
+    window.closeCallOverlay();
+    db.addLog("connection", `${currentUser.name} left study call.`);
+
+    // If this was an instant call/meeting, only the host deleting it should remove it for everyone
+    if (meetingToEnd && isHost && (meetingToEnd.meeting_type === 'voice' || meetingToEnd.meeting_type === 'video' || meetingToEnd.meeting_type === 'Audio Call' || meetingToEnd.meeting_type === 'Video Call')) {
       try {
         await db.deleteMeeting(meetingToEnd.id);
       } catch (e) { /* already deleted */ }
@@ -3386,7 +3425,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     overlay.innerHTML = `
       <div class="bg-slate-900 border border-slate-700 rounded-3xl p-8 max-w-xs w-full text-center shadow-2xl flex flex-col items-center gap-6">
         <div class="relative">
-          <div class="text-6xl w-24 h-24 bg-indigo-600/20 border-2 border-indigo-500 rounded-full flex items-center justify-center" style="animation: pulse 1.5s infinite;">${callerAvatar}</div>
+          <div class="text-6xl w-24 h-24 bg-indigo-600/20 border-2 border-indigo-500 rounded-full flex items-center justify-center overflow-hidden" style="animation: pulse 1.5s infinite;">${renderAvatar(callerAvatar, 'text-6xl', 'w-full h-full object-cover rounded-full')}</div>
           <span class="absolute -bottom-1 -right-1 text-2xl">${isVoice ? '📞' : '📹'}</span>
         </div>
         <div>
@@ -3612,7 +3651,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                  const lastText = room && room.messages.length > 0 ? room.messages[room.messages.length - 1].text : "No messages yet";
                  return `
                    <div id="chat-list-item-${p.id}" onclick="selectActiveChat('${p.id}')" class="flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all border ${isActive ? 'bg-indigo-50/50 border-indigo-100 font-semibold' : 'border-transparent hover:bg-slate-50'}">
-                     <div class="text-xl w-8 h-8 rounded-full bg-slate-100 border flex items-center justify-center">${p.avatar || '👤'}</div>
+                     <div class="text-xl w-8 h-8 rounded-full bg-slate-100 border flex items-center justify-center overflow-hidden">${renderAvatar(p.avatar, 'text-xl', 'w-full h-full object-cover rounded-full')}</div>
                      <div class="overflow-hidden flex-1">
                        <h4 class="text-xs text-slate-800 truncate">${p.name}</h4>
                        <p class="text-[10px] text-slate-400 truncate chat-list-last-text">${lastText}</p>
@@ -4043,8 +4082,18 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // --- 12. OTHER PANES STUBS ---
   
+  // Helper: render an avatar as either an <img> (photo) or emoji span
+  function renderAvatar(avatar, sizeClass = 'text-2xl', imgClass = 'w-full h-full object-cover rounded-full') {
+    if (avatar && avatar.startsWith('data:image')) {
+      return `<img src="${avatar}" class="${imgClass}" alt="avatar" />`;
+    }
+    return `<span class="${sizeClass}">${avatar || '👤'}</span>`;
+  }
+  window.renderAvatar = renderAvatar;
+
   function renderProfilePane() {
     const avatarOptions = ['👤','🧑','👦','👧','🧑‍💻','👨‍💻','👩‍💻','🧑‍🎓','👨‍🎓','👩‍🎓','🦊','🐻','🐼','🦁','🐯','🐨','🐸','🦄'];
+    const isPhoto = currentUser.avatar && currentUser.avatar.startsWith('data:image');
     sysPanes.profile.innerHTML = `
       <div class="space-y-6 max-w-2xl">
         <div class="bg-white border rounded-2xl p-6 shadow-sm space-y-6">
@@ -4059,10 +4108,19 @@ document.addEventListener("DOMContentLoaded", async () => {
           </div>
 
           <!-- Avatar Picker -->
-          <div class="flex items-center gap-4">
-            <div class="w-16 h-16 rounded-full bg-slate-100 border-2 border-brand-purple flex items-center justify-center text-4xl" id="profile-avatar-preview">${currentUser.avatar || '👤'}</div>
-            <div>
-              <p class="text-xs font-bold text-slate-700 mb-2 uppercase">Choose Avatar</p>
+          <div class="flex items-center gap-6">
+            <div class="relative shrink-0">
+              <div class="w-20 h-20 rounded-full bg-slate-100 border-2 border-brand-purple flex items-center justify-center text-4xl overflow-hidden" id="profile-avatar-preview">
+                ${isPhoto ? `<img src="${currentUser.avatar}" class="w-full h-full object-cover" alt="avatar" />` : (currentUser.avatar || '👤')}
+              </div>
+              <label for="avatar-file-input" class="absolute -bottom-1 -right-1 w-7 h-7 bg-brand-purple rounded-full flex items-center justify-center cursor-pointer border-2 border-white shadow text-white text-xs hover:bg-indigo-700 transition-all" title="Upload photo">
+                📷
+              </label>
+              <input type="file" id="avatar-file-input" accept="image/jpeg,image/jpg,image/png,image/webp" class="hidden" onchange="handleAvatarFileSelect(event)" />
+            </div>
+            <div class="flex-1">
+              <p class="text-xs font-bold text-slate-700 mb-1 uppercase">Profile Picture</p>
+              <p class="text-[11px] text-slate-400 mb-3">Upload a photo (JPG, PNG, WebP — max 5MB) or choose an emoji avatar below.</p>
               <div class="flex flex-wrap gap-1.5">
                 ${avatarOptions.map(a => `
                   <button onclick="selectProfileAvatar('${a}')" class="text-xl w-8 h-8 rounded-lg hover:bg-slate-100 border transition-all ${currentUser.avatar === a ? 'bg-indigo-50 border-brand-purple' : 'border-slate-200'}">${a}</button>
@@ -4112,7 +4170,36 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   window.selectProfileAvatar = function(avatar) {
     document.getElementById('prof-avatar').value = avatar;
-    document.getElementById('profile-avatar-preview').textContent = avatar;
+    const preview = document.getElementById('profile-avatar-preview');
+    if (preview) {
+      preview.innerHTML = avatar; // emoji
+    }
+  };
+
+  window.handleAvatarFileSelect = function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      showToast('Invalid file type. Please use JPG, PNG, or WebP.', 'error');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('Image is too large. Maximum size is 5MB.', 'error');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const base64 = e.target.result;
+      // Show preview immediately
+      const preview = document.getElementById('profile-avatar-preview');
+      if (preview) {
+        preview.innerHTML = `<img src="${base64}" class="w-full h-full object-cover" alt="preview" />`;
+      }
+      document.getElementById('prof-avatar').value = base64;
+      showToast('Photo selected! Click Save Changes to apply. 📷', 'info');
+    };
+    reader.readAsDataURL(file);
   };
 
   window.saveUserProfile = async function() {
@@ -4125,13 +4212,41 @@ document.addEventListener("DOMContentLoaded", async () => {
       currentUser.birthday    = document.getElementById('prof-birthday')?.value || currentUser.birthday || '';
       currentUser.address     = (document.getElementById('prof-address')?.value || '').trim();
       currentUser.contactInfo = (document.getElementById('prof-contact')?.value || '').trim();
-      currentUser.avatar      = document.getElementById('prof-avatar')?.value || currentUser.avatar;
-      
+      const newAvatar = document.getElementById('prof-avatar')?.value || currentUser.avatar;
+      const isPhotoUpload = newAvatar && newAvatar.startsWith('data:image');
+
+      showToast('Saving profile... ⏳', 'info');
+
+      // If a photo was selected, upload it separately via dedicated endpoint
+      if (isPhotoUpload && newAvatar !== currentUser.avatar) {
+        try {
+          const res = await db.uploadAvatar(currentUser.id, newAvatar);
+          if (res && res.success) {
+            currentUser.avatar = newAvatar;
+          } else {
+            showToast(res.message || 'Failed to upload photo.', 'error');
+            return;
+          }
+        } catch(e) {
+          showToast('Failed to upload photo. Try a smaller image.', 'error');
+          return;
+        }
+      } else {
+        currentUser.avatar = newAvatar;
+      }
+
       users[index] = { ...users[index], ...currentUser };
       await db.saveUsers(users);
 
-      // Update sidebar
-      document.getElementById('side-avatar').textContent    = currentUser.avatar || '👤';
+      // Update sidebar avatar
+      const sideAvatar = document.getElementById('side-avatar');
+      if (sideAvatar) {
+        if (currentUser.avatar && currentUser.avatar.startsWith('data:image')) {
+          sideAvatar.innerHTML = `<img src="${currentUser.avatar}" class="w-10 h-10 object-cover rounded-full" alt="avatar" />`;
+        } else {
+          sideAvatar.innerHTML = currentUser.avatar || '👤';
+        }
+      }
       document.getElementById('side-username').textContent  = currentUser.name;
       document.getElementById('side-program').textContent   = `${currentUser.yearSection} • ${currentUser.program}`;
       
@@ -4230,7 +4345,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       return `
         <div class="py-3 flex justify-between items-center text-xs border-b border-slate-100">
           <div class="flex items-center gap-2">
-            <span class="text-xl">${sender?.avatar || '👤'}</span>
+            <div class="w-8 h-8 rounded-full bg-slate-100 border flex items-center justify-center text-xl overflow-hidden">${renderAvatar(sender?.avatar, 'text-xl', 'w-full h-full object-cover rounded-full')}</div>
             <div>
               <p class="text-slate-800 font-semibold">${sender?.name || 'Unknown'} sent you a study request ${onlineDot}</p>
               <p class="text-slate-400 text-[10px]">Partner request • pending your response</p>

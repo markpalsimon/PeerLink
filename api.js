@@ -571,6 +571,27 @@ const db = {
     }
   },
 
+  // uploadAvatar: uploads a base64 image as profile picture
+  uploadAvatar: async (userId, base64DataUrl) => {
+    if (isOffline) {
+      const idx = cache.users.findIndex(u => u.id === userId);
+      if (idx !== -1) { cache.users[idx].avatar = base64DataUrl; }
+      localStorage.setItem('peerlink_users', JSON.stringify(cache.users));
+      return { success: true };
+    }
+    const res = await apiFetch(`/users/${userId}/avatar`, {
+      method: 'POST',
+      timeout: 30000,
+      body: JSON.stringify({ avatarData: base64DataUrl })
+    });
+    if (res.success && res.user) {
+      const idx = cache.users.findIndex(u => u.id === userId);
+      if (idx !== -1) { cache.users[idx] = res.user; }
+      localStorage.setItem('peerlink_users', JSON.stringify(cache.users));
+    }
+    return res;
+  },
+
   // Delete a user from backend + cache + localStorage
   deleteUser: async (userId) => {
     cache.users = cache.users.filter(u => u.id !== userId);

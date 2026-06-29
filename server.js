@@ -377,6 +377,43 @@ app.delete('/api/users/:id', async (req, res) => {
   }
 });
 
+// POST /api/users/:id/avatar — upload profile picture as base64
+app.post('/api/users/:id/avatar', async (req, res) => {
+  try {
+    const { avatarData } = req.body; // base64 data URL: "data:image/jpeg;base64,..."
+    const userId = req.params.id;
+
+    if (!avatarData) {
+      return res.status(400).json({ success: false, message: 'No image data provided.' });
+    }
+
+    // Validate it's a real image data URL
+    const validPrefixes = ['data:image/jpeg;base64,', 'data:image/jpg;base64,', 'data:image/png;base64,', 'data:image/webp;base64,', 'data:image/gif;base64,'];
+    const isValid = validPrefixes.some(prefix => avatarData.startsWith(prefix));
+    if (!isValid) {
+      return res.status(400).json({ success: false, message: 'Invalid image format. Use JPG, PNG, WebP, or GIF.' });
+    }
+
+    // Enforce 5MB limit (base64 is ~33% larger than raw so base64 5MB ~ 3.75MB raw)
+    const sizeInBytes = (avatarData.length * 3) / 4;
+    if (sizeInBytes > 5 * 1024 * 1024) {
+      return res.status(400).json({ success: false, message: 'Image too large. Maximum size is 5MB.' });
+    }
+
+    await pool.query('UPDATE users SET avatar = $1, updated_at = NOW() WHERE id = $2', [avatarData, userId]);
+
+    const result = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+
+    res.json({ success: true, user: mapUser(result.rows[0]) });
+  } catch (err) {
+    console.error('Avatar upload error:', err);
+    res.status(500).json({ success: false, message: 'Server error uploading avatar.' });
+  }
+});
+
 // =============================================
 // CONNECTIONS ROUTES
 // =============================================
