@@ -886,7 +886,7 @@ async function sendOTPMail(email, otp, subject, bodyText) {
         },
         body: JSON.stringify({
           from: {
-            email: 'MS_Xm68k5@trial-ynrwg1pd7p842k7d.mlsender.net', // Default Mailersend sandbox sender
+            email: 'MS_Xm68k5@test-z0vklo6d3xel7qrx.mlsender.net', // Your Mailersend sandbox sender
             name: 'PeerLink'
           },
           to: [
