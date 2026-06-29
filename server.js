@@ -152,12 +152,14 @@ app.post('/api/auth/register-send-otp', async (req, res) => {
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expires = Date.now() + 10 * 60 * 1000; // 10 minutes
 
-    // Store OTP immediately so verification can proceed even if email is slow
-    pendingRegistrations[email] = {
-      userData: { name, studentId, email, password, program, yearLevel, courses, skills, schedule },
-      otp,
-      expires
-    };
+    // Store OTP + registration data in DB so it survives server restarts/sleeps
+    const userData = JSON.stringify({ name, studentId, email, password, program, yearLevel, courses, skills, schedule });
+    await pool.query(
+      `INSERT INTO otp_store (email, code, expires_at, user_data)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (email) DO UPDATE SET code = $2, expires_at = $3, user_data = $4, created_at = NOW()`,
+      [email, otp, expires, userData]
+    );
 
     // Respond to client IMMEDIATELY — do NOT await the email
     res.json({ success: true, message: 'Verification OTP sent to email.' });
@@ -180,22 +182,25 @@ app.post('/api/auth/register-send-otp', async (req, res) => {
 app.post('/api/auth/register-verify-otp', async (req, res) => {
   try {
     const { email, code } = req.body;
-    const pending = pendingRegistrations[email];
 
-    if (!pending) {
-      return res.status(400).json({ success: false, message: 'No registration data found for this email.' });
+    // Look up from DB
+    const otpResult = await pool.query('SELECT * FROM otp_store WHERE email = $1', [email]);
+    const pending = otpResult.rows[0];
+
+    if (!pending || !pending.user_data) {
+      return res.status(400).json({ success: false, message: 'No registration data found. Please register again.' });
     }
 
-    if (Date.now() > pending.expires) {
-      delete pendingRegistrations[email];
+    if (Date.now() > Number(pending.expires_at)) {
+      await pool.query('DELETE FROM otp_store WHERE email = $1', [email]);
       return res.status(400).json({ success: false, message: 'Verification code has expired. Please register again.' });
     }
 
-    if (pending.otp !== code) {
+    if (pending.code !== code) {
       return res.status(400).json({ success: false, message: 'Incorrect verification code.' });
     }
 
-    const { name, studentId, password, program, yearLevel, courses, skills, schedule } = pending.userData;
+    const { name, studentId, password, program, yearLevel, courses, skills, schedule } = JSON.parse(pending.user_data);
     const passwordHash = await bcrypt.hash(password, 10);
     const newId = 'student_' + Date.now();
     const yearSection = `${program} ${yearLevel || ''}`.trim();
@@ -209,8 +214,8 @@ app.post('/api/auth/register-verify-otp', async (req, res) => {
        JSON.stringify(schedule || {})]
     );
 
-    // Clean up
-    delete pendingRegistrations[email];
+    // Clean up OTP from DB
+    await pool.query('DELETE FROM otp_store WHERE email = $1', [email]);
 
     const result = await pool.query('SELECT * FROM users WHERE id = $1', [newId]);
     await addLog('user', `New user ${name} registered & verified email.`);
@@ -234,13 +239,18 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expires = Date.now() + 10 * 60 * 1000; // 10 minutes
 
-    // Store OTP immediately so verification can proceed even if email is slow
-    otpStore[email] = { code: otp, expires };
+    // Store in DB (no user_data for password reset — just code + expiry)
+    await pool.query(
+      `INSERT INTO otp_store (email, code, expires_at)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (email) DO UPDATE SET code = $2, expires_at = $3, user_data = NULL, created_at = NOW()`,
+      [email, otp, expires]
+    );
 
     // Respond to client IMMEDIATELY — do NOT await the email
     res.json({ success: true, message: 'Verification OTP sent to email.' });
 
-    // Send email in background (fire-and-forget) so slow SMTP never causes client timeout
+    // Send email in background
     sendOTPMail(
       email,
       otp,
@@ -255,41 +265,48 @@ app.post('/api/auth/forgot-password', async (req, res) => {
 });
 
 // POST /api/auth/verify-forgot-otp
-app.post('/api/auth/verify-forgot-otp', (req, res) => {
-  const { email, code } = req.body;
-  const store = otpStore[email];
+app.post('/api/auth/verify-forgot-otp', async (req, res) => {
+  try {
+    const { email, code } = req.body;
+    const result = await pool.query('SELECT * FROM otp_store WHERE email = $1', [email]);
+    const store = result.rows[0];
 
-  if (!store) {
-    return res.status(400).json({ success: false, message: 'Verification code not found or expired.' });
+    if (!store) {
+      return res.status(400).json({ success: false, message: 'Verification code not found or expired.' });
+    }
+
+    if (Date.now() > Number(store.expires_at)) {
+      await pool.query('DELETE FROM otp_store WHERE email = $1', [email]);
+      return res.status(400).json({ success: false, message: 'Verification code has expired.' });
+    }
+
+    if (store.code !== code) {
+      return res.status(400).json({ success: false, message: 'Incorrect verification code.' });
+    }
+
+    res.json({ success: true, message: 'OTP verified successfully.' });
+  } catch (err) {
+    console.error('Verify forgot OTP error:', err);
+    res.status(500).json({ success: false, message: 'Server error verifying code.' });
   }
-
-  if (Date.now() > store.expires) {
-    delete otpStore[email];
-    return res.status(400).json({ success: false, message: 'Verification code has expired.' });
-  }
-
-  if (store.code !== code) {
-    return res.status(400).json({ success: false, message: 'Incorrect verification code.' });
-  }
-
-  res.json({ success: true, message: 'OTP verified successfully.' });
 });
 
 // POST /api/auth/reset-password
 app.post('/api/auth/reset-password', async (req, res) => {
   try {
     const { email, code, newPassword } = req.body;
-    const store = otpStore[email];
+    const result = await pool.query('SELECT * FROM otp_store WHERE email = $1', [email]);
+    const store = result.rows[0];
 
-    if (!store || store.code !== code || Date.now() > store.expires) {
+    if (!store || store.code !== code || Date.now() > Number(store.expires_at)) {
       return res.status(400).json({ success: false, message: 'Invalid or expired verification session.' });
     }
 
     const passwordHash = await bcrypt.hash(newPassword, 10);
     await pool.query('UPDATE users SET password_hash = $1 WHERE email = $2', [passwordHash, email]);
 
-    // Clean up OTP store
-    delete otpStore[email];
+    // Clean up OTP from DB
+    await pool.query('DELETE FROM otp_store WHERE email = $1', [email]);
 
     res.json({ success: true, message: 'Password has been successfully updated.' });
   } catch (err) {
@@ -818,42 +835,56 @@ app.post('/api/meetings', async (req, res) => {
   }
 });
 
-// OTP and registration temporary storage
-const otpStore = {}; // { email: { code, expires } }
-const pendingRegistrations = {}; // { email: { userData, otp, expires } }
+// OTP temporary storage — now backed by PostgreSQL (otp_store table)
+// In-memory fallbacks kept for legacy reference only
+const otpStore = {};            // DEPRECATED: kept for safety, now using DB
+const pendingRegistrations = {}; // DEPRECATED: kept for safety, now using DB
 
-// Helper function to send email or print to console if no email credentials are set
+// Helper function to send OTP email via Gmail SMTP
 async function sendOTPMail(email, otp, subject, bodyText) {
-  console.log(`[OTP Verification] Generated code for ${email}: ${otp}`);
-  
-  // Use user-provided email or process.env variables
+  console.log(`[OTP] Code for ${email}: ${otp}`);
+
+  // Gmail credentials from env (set on Render dashboard)
   const emailUser = process.env.EMAIL_USER || 'vincentpalsi02@gmail.com';
-  const emailPass = process.env.EMAIL_PASS || 'ksirdbelskpvfdag';
+  const emailPass = process.env.EMAIL_PASS || 'ksir dbel skpv fdag'; // ← spaces required for Gmail App Password
 
-  if (emailUser && emailPass) {
-    try {
-      const transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-          user: emailUser,
-          pass: emailPass
-        }
-      });
+  if (!emailUser || !emailPass) {
+    console.log('[OTP] EMAIL_USER or EMAIL_PASS not set — OTP printed above only.');
+    return;
+  }
 
-      const mailOptions = {
-        from: `"PeerLink" <${emailUser}>`,
-        to: email,
-        subject: subject,
-        text: `${bodyText}\n\nVerification Code: ${otp}\n\nNote: This code will expire in 10 minutes. If you did not request this, please ignore this email.`
-      };
+  try {
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: emailUser,
+        pass: emailPass
+      }
+    });
 
-      await transporter.sendMail(mailOptions);
-      console.log(`Email successfully sent to ${email}`);
-    } catch (err) {
-      console.error(`Nodemailer error sending to ${email}:`, err.message);
-    }
-  } else {
-    console.log(`Nodemailer NOT configured. OTP printed above.`);
+    const mailOptions = {
+      from: `"PeerLink" <${emailUser}>`,
+      to: email,
+      subject: subject,
+      text: `${bodyText}\n\nVerification Code: ${otp}\n\nThis code expires in 10 minutes. If you did not request this, please ignore this email.`,
+      html: `
+        <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:24px;border:1px solid #e2e8f0;border-radius:12px;">
+          <h2 style="color:#6366f1;margin-bottom:8px;">PeerLink</h2>
+          <p style="color:#334155;">${bodyText}</p>
+          <div style="background:#f1f5f9;border-radius:8px;padding:20px;text-align:center;margin:24px 0;">
+            <p style="margin:0;font-size:12px;color:#64748b;">Your Verification Code</p>
+            <p style="margin:8px 0 0;font-size:36px;font-weight:bold;letter-spacing:8px;color:#6366f1;">${otp}</p>
+          </div>
+          <p style="font-size:12px;color:#94a3b8;">This code expires in 10 minutes.</p>
+        </div>
+      `
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`[OTP] Email successfully sent to ${email}`);
+  } catch (err) {
+    console.error(`[OTP] Failed to send email to ${email}:`, err.message);
+    // DO NOT throw — the OTP is already stored in DB so the user can still try manually
   }
 }
 
