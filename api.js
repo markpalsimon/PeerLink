@@ -2,7 +2,7 @@
 // Combines mockData.js LocalStorage logic with async Express backend sync.
 // Exposes synchronous read cache so app.js runs smoothly without crashes.
 
-const API_BASE = 'http://127.0.0.1:3000/api';
+const API_BASE = window.location.origin + '/api';
 
 // =============================================
 // GLOBAL METADATA CONSTANTS
