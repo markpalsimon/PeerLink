@@ -315,6 +315,21 @@ app.post('/api/auth/reset-password', async (req, res) => {
   }
 });
 
+// GET /api/auth/get-otp — retrieves generated code for testing / demo fallbacks
+app.get('/api/auth/get-otp', async (req, res) => {
+  try {
+    const { email } = req.query;
+    const result = await pool.query('SELECT code FROM otp_store WHERE email = $1', [email]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'No code found for this email address.' });
+    }
+    res.json({ success: true, code: result.rows[0].code });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Server error retrieving code.' });
+  }
+});
+
+
 // =============================================
 // USER ROUTES
 // =============================================

@@ -425,6 +425,11 @@ const db = {
       body: JSON.stringify({ email, code, newPassword })
     });
   },
+
+  getOTP: async (email) => {
+    if (isOffline) return { success: true, code: '123456' };
+    return await apiFetch(`/auth/get-otp?email=${encodeURIComponent(email)}`);
+  },
   
   // createMeeting: POSTs directly to server, returns meeting with real DB id + created_at
   createMeeting: async (meetingData) => {

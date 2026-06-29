@@ -539,6 +539,10 @@
         <div class="text-xs text-slate-500 mt-6 flex flex-col gap-2">
           <span>Verification code expires in: <span id="forgot-otp-timer" class="font-bold text-slate-700">10:00</span></span>
           <span>Didn't receive the email? <a href="#" id="forgot-otp-resend-btn" class="text-brand-purple font-semibold hover:underline cursor-pointer" onclick="handleResendForgotOTP(event)">Resend Code</a></span>
+          <div class="mt-2 border-t pt-2">
+            <span class="text-slate-400">Demo Mode:</span> 
+            <a href="#" class="text-amber-600 font-bold hover:underline ml-1 cursor-pointer" onclick="autofillDemoOTP('forgot')">Auto-retrieve OTP</a>
+          </div>
         </div>
       </div>
     </section>
@@ -705,6 +709,10 @@
                 <div class="text-xs text-slate-500 flex flex-col gap-2 pt-2">
                   <span>Verification code expires in: <span id="reg-otp-timer" class="font-bold text-slate-700">10:00</span></span>
                   <span>Didn't receive code? <a href="#" id="reg-otp-resend-btn" class="text-brand-purple font-semibold hover:underline cursor-pointer" onclick="handleResendRegisterOTP(event)">Resend Code</a></span>
+                  <div class="mt-2 border-t pt-2">
+                    <span class="text-slate-400">Demo Mode:</span> 
+                    <a href="#" class="text-amber-600 font-bold hover:underline ml-1 cursor-pointer" onclick="autofillDemoOTP('reg')">Auto-retrieve OTP</a>
+                  </div>
                 </div>
               </div>
             </div>

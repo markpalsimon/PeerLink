@@ -1383,6 +1383,30 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   };
 
+  window.autofillDemoOTP = async function(mode) {
+    try {
+      const email = mode === 'reg' ? regData.email : forgotEmailStr;
+      if (!email) {
+        showToast('Please type your email address first.', 'warning');
+        return;
+      }
+      showToast('Retrieving code... 🔍', 'info');
+      const res = await db.getOTP(email);
+      if (res && res.success && res.code) {
+        const inputId = mode === 'reg' ? 'reg-otp-code' : 'forgot-otp-code';
+        const input = document.getElementById(inputId);
+        if (input) {
+          input.value = res.code;
+          showToast('Code retrieved and entered! ✨', 'success');
+        }
+      } else {
+        showToast(res.message || 'Verification code not found.', 'warning');
+      }
+    } catch (err) {
+      showToast('Could not retrieve code automatically.', 'error');
+    }
+  };
+
   window.handleForgotOTPVerifySubmit = async function(e) {
     e.preventDefault();
     const code = document.getElementById('forgot-otp-code').value.trim();
