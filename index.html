@@ -139,6 +139,7 @@
           </a>
           <a href="#" id="side-link-messages" class="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium hover:text-white hover:bg-slate-800/55 transition-colors" onclick="showSystemView('messages')">
             <span>💬</span> Messages
+            <span id="messages-badge" class="hidden ml-auto bg-indigo-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none"></span>
           </a>
           <a href="#" id="side-link-notifications" class="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium hover:text-white hover:bg-slate-800/55 transition-colors" onclick="showSystemView('notifications')">
             <span>🔔</span> Notifications
@@ -754,9 +755,10 @@
         <span class="text-lg">🤝</span>
         <span class="text-[9px] font-medium">Matches</span>
       </button>
-      <button class="mobile-nav-btn flex flex-col items-center gap-0.5 py-1 px-2 rounded-lg transition-colors" onclick="showSystemView('messages')" id="mob-nav-messages">
+      <button class="mobile-nav-btn flex flex-col items-center gap-0.5 py-1 px-2 rounded-lg transition-colors relative" onclick="showSystemView('messages')" id="mob-nav-messages">
         <span class="text-lg">💬</span>
         <span class="text-[9px] font-medium">Messages</span>
+        <span id="messages-badge-mobile" class="hidden absolute top-1 right-4 bg-indigo-600 text-white text-[8px] font-bold w-4 h-4 rounded-full flex items-center justify-center"></span>
       </button>
       <button class="mobile-nav-btn flex flex-col items-center gap-0.5 py-1 px-2 rounded-lg transition-colors" onclick="showSystemView('meetings')" id="mob-nav-meetings">
         <span class="text-lg">💻</span>

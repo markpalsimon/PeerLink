@@ -764,23 +764,73 @@ document.addEventListener("DOMContentLoaded", async () => {
         c.status === "accepted" && (c.senderId === currentUser.id || c.receiverId === currentUser.id)
       ).map(c => c.senderId === currentUser.id ? c.receiverId : c.senderId);
 
+      window._lastRoomMessageIds = window._lastRoomMessageIds || {};
+      let totalUnreadMessages = 0;
+
       await Promise.all(activePartners.map(async (partnerId) => {
         const roomId = [currentUser.id, partnerId].sort().join('_');
         try {
           const room = await db.getChatRoom(roomId);
-          if (room && activeChatCollabId === partnerId && activeSystemView === 'messages') {
-            const container = document.getElementById('chat-messages-container');
-            if (container) {
-              const msgs = room.messages || [];
-              const currentCount = parseInt(container.getAttribute('data-msg-count') || '-1');
-              if (msgs.length !== currentCount) {
-                container.setAttribute('data-msg-count', msgs.length);
-                renderMessagesPane();
+          if (room) {
+            const msgs = room.messages || [];
+            
+            // Calculate unread messages for this room
+            const unreadMsgs = msgs.filter(m => m.senderId !== currentUser.id && !m.isRead);
+            totalUnreadMessages += unreadMsgs.length;
+
+            if (msgs.length > 0) {
+              const lastMsg = msgs[msgs.length - 1];
+              const lastMsgId = String(lastMsg.id || lastMsg.time);
+              const prevMsgId = window._lastRoomMessageIds[roomId];
+
+              // If it's a new message from the partner
+              if (lastMsg.senderId !== currentUser.id && prevMsgId && prevMsgId !== lastMsgId) {
+                // Play notification sound
+                const sound = document.getElementById('notif-sound');
+                if (sound) sound.play().catch(() => {});
+
+                // Show toast if not actively viewing this chat
+                if (activeChatCollabId !== partnerId || activeSystemView !== 'messages') {
+                  let alertText = lastMsg.text;
+                  if (alertText.startsWith('data:image/')) alertText = '📷 Sent an image';
+                  else if (alertText.startsWith('[FILE]:')) alertText = '📁 Sent a file';
+                  
+                  showToast(`💬 ${lastMsg.senderName}: "${alertText}"`, 'info', 5000);
+                }
+              }
+
+              // Update tracked last message ID
+              window._lastRoomMessageIds[roomId] = lastMsgId;
+            }
+
+            // Real-time update of chat window if open
+            if (activeChatCollabId === partnerId && activeSystemView === 'messages') {
+              const container = document.getElementById('chat-messages-container');
+              if (container) {
+                const currentCount = parseInt(container.getAttribute('data-msg-count') || '-1');
+                if (msgs.length !== currentCount) {
+                  container.setAttribute('data-msg-count', msgs.length);
+                  renderMessagesPane();
+                }
               }
             }
           }
         } catch (e) {}
       }));
+
+      // Update Messages badges
+      const msgBadge = document.getElementById('messages-badge');
+      const msgBadgeMobile = document.getElementById('messages-badge-mobile');
+      [msgBadge, msgBadgeMobile].forEach(badge => {
+        if (badge) {
+          if (totalUnreadMessages > 0) {
+            badge.textContent = totalUnreadMessages;
+            badge.classList.remove('hidden');
+          } else {
+            badge.classList.add('hidden');
+          }
+        }
+      });
     } catch (err) {
       // Offline fallback
     }
