@@ -66,6 +66,7 @@ async function addLog(type, message) {
 // HELPER: Map DB row -> frontend user object
 // =============================================
 function mapUser(row) {
+  const isOnlineDb = row.is_online !== undefined ? row.is_online : null;
   return {
     id:          row.id,
     studentId:   row.student_id,
@@ -79,7 +80,7 @@ function mapUser(row) {
     address:     row.address || '',
     contactInfo: row.contact_info || '',
     isBanned:    row.is_banned || false,
-    isOnline:    row.last_active ? (Date.now() - new Date(row.last_active).getTime() < 10000) : false,
+    isOnline:    isOnlineDb !== null ? isOnlineDb : (row.last_active ? (Math.abs(Date.now() - new Date(row.last_active).getTime()) < 60000) : false),
     courses:     row.courses,
     skills:      row.skills,
     schedule:    row.schedule,
@@ -98,7 +99,7 @@ app.post('/api/auth/login', async (req, res) => {
 
     // Look up user by student_id or email (works for both admin and students)
     const result = await pool.query(
-      'SELECT * FROM users WHERE student_id = $1 OR email = $1',
+      "SELECT *, (last_active > NOW() - INTERVAL '35 seconds') AS is_online FROM users WHERE student_id = $1 OR email = $1",
       [studentId]
     );
 
@@ -337,7 +338,7 @@ app.get('/api/auth/get-otp', async (req, res) => {
 // GET /api/users — get all users
 app.get('/api/users', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM users ORDER BY created_at ASC');
+    const result = await pool.query("SELECT *, (last_active > NOW() - INTERVAL '35 seconds') AS is_online FROM users ORDER BY created_at ASC");
     res.json(result.rows.map(mapUser));
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -347,7 +348,7 @@ app.get('/api/users', async (req, res) => {
 // GET /api/users/:id
 app.get('/api/users/:id', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM users WHERE id = $1', [req.params.id]);
+    const result = await pool.query("SELECT *, (last_active > NOW() - INTERVAL '35 seconds') AS is_online FROM users WHERE id = $1", [req.params.id]);
     if (result.rows.length === 0) return res.status(404).json({ error: 'User not found' });
     res.json(mapUser(result.rows[0]));
   } catch (err) {

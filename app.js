@@ -3763,6 +3763,17 @@ document.addEventListener("DOMContentLoaded", async () => {
         convPanel.style.display = '';
       }
 
+      // Dynamically update input disabled/placeholder state
+      if (chatInput) {
+        if (activeChatCollabId) {
+          chatInput.removeAttribute('disabled');
+          chatInput.placeholder = 'Type a message...';
+        } else {
+          chatInput.setAttribute('disabled', 'true');
+          chatInput.placeholder = 'Select a conversation to start';
+        }
+      }
+
       // 1. Update Active Partner Header Name and details
       const headerName = document.getElementById("chat-header-partner-name");
       const headerSection = document.getElementById("chat-header-partner-section");
@@ -3810,10 +3821,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         const msgId = m.id || '';
         return `
           <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'} space-y-0.5"
-               oncontextmenu="showMsgMenu(event,'${msgId}','${m.senderId}','${_activeRoomId}',${safeText})"
-               ontouchstart="this._touchTimer=setTimeout(()=>showMsgMenu({preventDefault:()=>{},stopPropagation:()=>{}},event,'${msgId}','${m.senderId}','${_activeRoomId}',${safeText}),500)"
-               ontouchend="clearTimeout(this._touchTimer)">
-            <div class="px-3.5 py-2 rounded-2xl text-xs max-w-[75%] cursor-pointer select-text ${isMe ? 'bg-indigo-600 text-white rounded-br-sm' : 'bg-slate-100 text-slate-800 rounded-bl-sm'}">
+               onclick="showMsgMenu(event,'${msgId}','${m.senderId}','${_activeRoomId}',${safeText})">
+            <div class="px-3.5 py-2 rounded-2xl text-xs max-w-[75%] cursor-pointer select-text transition-transform active:scale-[0.98] ${isMe ? 'bg-indigo-600 hover:bg-indigo-700 text-white rounded-br-sm' : 'bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-bl-sm'}">
               ${renderMessageBubbleContent(m.text)}
             </div>
             <div class="flex items-center gap-1 px-1">
@@ -3939,10 +3948,9 @@ document.addEventListener("DOMContentLoaded", async () => {
                    : '';
                  return `
                    <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'} space-y-0.5 group"
-                        oncontextmenu="showMsgMenu(event,'${msgId}','${m.senderId}','${activeRoomId}',${safeText})"
-                        ontouchstart="this._tt=setTimeout(()=>showMsgMenu({preventDefault:()=>{},stopPropagation:()=>{}},event,'${msgId}','${m.senderId}','${activeRoomId}',${safeText}),600)" ontouchend="clearTimeout(this._tt)">
-                     <div class="px-3.5 py-2 rounded-2xl text-xs max-w-[78%] leading-relaxed cursor-context-menu select-text
-                       ${isMe ? 'bg-indigo-600 text-white rounded-br-sm' : 'bg-slate-100 text-slate-800 rounded-bl-sm'}">
+                        onclick="showMsgMenu(event,'${msgId}','${m.senderId}','${activeRoomId}',${safeText})">
+                     <div class="px-3.5 py-2 rounded-2xl text-xs max-w-[78%] leading-relaxed cursor-pointer select-text transition-transform active:scale-[0.98]
+                       ${isMe ? 'bg-indigo-600 hover:bg-indigo-700 text-white rounded-br-sm' : 'bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-bl-sm'}">
                        ${renderMessageBubbleContent(m.text)}
                      </div>
                      <div class="flex items-center gap-1 px-1">
