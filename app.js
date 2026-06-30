@@ -3647,29 +3647,76 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     if (!activeChatCollabId && partners.length > 0) {
-      activeChatCollabId = partners[0].id;
+      // Only auto-select on desktop, leave null on mobile so it shows the list first
+      if (window.innerWidth >= 768) {
+        activeChatCollabId = partners[0].id;
+      }
     }
 
     const activePartnerObj = partners.find(p => p.id === activeChatCollabId);
     
     // Fetch active messages
-    const activeRoom = chats.find(c => 
+    const activeRoom = activeChatCollabId ? chats.find(c => 
       c.roomId === `${currentUser.id}_${activeChatCollabId}` ||
       c.roomId === `${activeChatCollabId}_${currentUser.id}`
-    );
+    ) : null;
     const messagesList = activeRoom ? activeRoom.messages : [];
+
+    // Helper to render message text (handles images and files)
+    const renderMessageBubbleContent = (text) => {
+      if (text.startsWith('data:image/')) {
+        return `<img src="${text}" class="max-w-full max-h-60 rounded-xl object-cover cursor-pointer hover:opacity-90 transition-opacity" onclick="window.open('${text}')" alt="Attachment" />`;
+      }
+      if (text.startsWith('[FILE]:')) {
+        try {
+          const parts = text.substring(7).split('|');
+          const filename = parts[0];
+          const fileData = parts.slice(1).join('|');
+          return `
+            <div class="flex items-center gap-3 p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200/60 rounded-xl max-w-xs">
+              <div class="text-2xl shrink-0">📂</div>
+              <div class="min-w-0 flex-1">
+                <p class="text-xs font-semibold text-slate-800 dark:text-slate-100 truncate">${filename}</p>
+                <a href="${fileData}" download="${filename}" class="text-[10px] text-indigo-600 dark:text-indigo-400 hover:underline font-bold block mt-0.5">Download File</a>
+              </div>
+            </div>
+          `;
+        } catch (e) {
+          return `<span class="italic text-slate-400">Broken file attachment</span>`;
+        }
+      }
+      return text;
+    };
 
     // Check if the chat layout is already rendered in sysPanes.messages
     const messagesListContainer = document.getElementById("chat-messages-container");
     const chatInput = document.getElementById("chat-pane-input");
 
+    const isMobile = window.innerWidth < 768;
+
     if (messagesListContainer && chatInput) {
       // Chat layout is already present! Let's update elements dynamically to preserve input focus & value.
       
+      // Update display properties for mobile view toggling
+      const listPanel = document.getElementById('chat-list-panel');
+      const convPanel = document.getElementById('chat-conv-panel');
+      if (listPanel && convPanel && isMobile) {
+        if (activeChatCollabId) {
+          listPanel.style.setProperty('display', 'none', 'important');
+          convPanel.style.setProperty('display', 'flex', 'important');
+        } else {
+          listPanel.style.setProperty('display', 'flex', 'important');
+          convPanel.style.setProperty('display', 'none', 'important');
+        }
+      } else if (listPanel && convPanel) {
+        listPanel.style.display = '';
+        convPanel.style.display = '';
+      }
+
       // 1. Update Active Partner Header Name and details
       const headerName = document.getElementById("chat-header-partner-name");
       const headerSection = document.getElementById("chat-header-partner-section");
-      if (headerName) headerName.textContent = activePartnerObj ? activePartnerObj.name : 'Select Chat';
+      if (headerName) headerName.textContent = activePartnerObj ? activePartnerObj.name : 'Select a conversation';
       if (headerSection) headerSection.textContent = activePartnerObj ? activePartnerObj.yearSection : '';
 
       // 2. Update Schedule button attributes
@@ -3687,11 +3734,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       // 4. Update Left Sidebar Room List last-texts
       partners.forEach(p => {
         const room = chats.find(c => c.roomId === `${currentUser.id}_${p.id}` || c.roomId === `${p.id}_${currentUser.id}`);
-        const lastText = room && room.messages.length > 0 ? room.messages[room.messages.length - 1].text : "No messages yet";
+        let lastText = room && room.messages.length > 0 ? room.messages[room.messages.length - 1].text : "Say hello!";
+        if (lastText.startsWith('data:image/')) lastText = "📷 Sent an image";
+        if (lastText.startsWith('[FILE]:')) lastText = "📁 Sent a file";
         const itemElement = document.getElementById(`chat-list-item-${p.id}`);
         if (itemElement) {
           const isActive = p.id === activeChatCollabId;
-          itemElement.className = `flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all border ${isActive ? 'bg-indigo-50/50 border-indigo-100 font-semibold' : 'border-transparent hover:bg-slate-50'}`;
+          itemElement.className = `flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all border ${isActive ? 'bg-indigo-50 border-indigo-100' : 'border-transparent hover:bg-slate-50'}`;
           const textElem = itemElement.querySelector(".chat-list-last-text");
           if (textElem) textElem.textContent = lastText;
         }
@@ -3700,12 +3749,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       // 5. Update Messages HTML content only if message count or contents changed
       const oldHTML = messagesListContainer.innerHTML;
       const _deletedForMe = db.getDeletedForMe(currentUser.id);
-      const _activeRoomId = [currentUser.id, activeChatCollabId].sort().join('_');
+      const _activeRoomId = activeChatCollabId ? [currentUser.id, activeChatCollabId].sort().join('_') : '';
       let newHTML = messagesList.filter(m => !_deletedForMe.has(String(m.id))).map((m, idx, arr) => {
         const isMe = m.senderId === currentUser.id;
-        const isLast = idx === arr.length - 1;
         const seenTick = isMe ? (m.isRead
-          ? `<span class="text-[9px] font-bold text-indigo-400" title="Seen">✓✓</span>`
+          ? `<span class="text-[9px] font-bold text-indigo-500" title="Seen">✓✓</span>`
           : `<span class="text-[9px] text-slate-300" title="Delivered">✓</span>`
         ) : '';
         const safeText = JSON.stringify(m.text);
@@ -3716,7 +3764,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                ontouchstart="this._touchTimer=setTimeout(()=>showMsgMenu({preventDefault:()=>{},stopPropagation:()=>{}},event,'${msgId}','${m.senderId}','${_activeRoomId}',${safeText}),500)"
                ontouchend="clearTimeout(this._touchTimer)">
             <div class="px-3.5 py-2 rounded-2xl text-xs max-w-[75%] cursor-pointer select-text ${isMe ? 'bg-indigo-600 text-white rounded-br-sm' : 'bg-slate-100 text-slate-800 rounded-bl-sm'}">
-              ${m.text}
+              ${renderMessageBubbleContent(m.text)}
             </div>
             <div class="flex items-center gap-1 px-1">
               <span class="text-[9px] text-slate-400">${isMe ? 'You' : m.senderName} · ${m.time}</span>
@@ -3727,8 +3775,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       }).join('');
       if (messagesList.length === 0) {
         newHTML = `
-          <div class="p-12 text-center text-slate-400 text-xs">
-            No messages. Say hello to start collaborating!
+          <div class="flex flex-col items-center justify-center h-full text-center text-slate-400 py-12 gap-3">
+            <div class="text-4xl">💬</div>
+            <p class="text-xs">No messages yet. Say hi!</p>
           </div>
         `;
       }
@@ -3746,7 +3795,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       <div id="chat-layout-grid" class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 items-stretch" style="height: min(600px, calc(100dvh - 9rem))">
         
          <!-- Left Panel: Chat List -->
-         <div id="chat-list-panel" class="bg-white border rounded-2xl flex flex-col overflow-hidden shadow-sm">
+         <div id="chat-list-panel" class="bg-white border rounded-2xl flex flex-col overflow-hidden shadow-sm" style="${isMobile && activeChatCollabId ? 'display: none !important;' : ''}">
            <div class="px-4 pt-4 pb-2 border-b shrink-0">
              <h3 class="font-heading font-bold text-slate-800 text-sm">Study Rooms</h3>
              <p class="text-[10px] text-slate-400 mt-0.5">${partners.length} connections</p>
@@ -3756,10 +3805,11 @@ document.addEventListener("DOMContentLoaded", async () => {
                const isActive = p.id === activeChatCollabId;
                const isOnline = (window.onlineUserIds || new Set()).has(p.id);
                const room = chats.find(c => c.roomId === `${currentUser.id}_${p.id}` || c.roomId === `${p.id}_${currentUser.id}`);
-               const lastText = room && room.messages.length > 0 ? room.messages[room.messages.length - 1].text : "Say hello!";
+               let lastText = room && room.messages.length > 0 ? room.messages[room.messages.length - 1].text : "Say hello!";
+               if (lastText.startsWith('data:image/')) lastText = "📷 Sent an image";
+               if (lastText.startsWith('[FILE]:')) lastText = "📁 Sent a file";
                const lastMsg = room && room.messages.length > 0 ? room.messages[room.messages.length - 1] : null;
                const lastTime = lastMsg ? lastMsg.time : '';
-               // Unread count: messages from partner that aren't read
                const unreadCount = room ? (room.messages || []).filter(m => m.senderId !== currentUser.id && !m.isRead).length : 0;
                return `
                  <div id="chat-list-item-${p.id}" onclick="selectActiveChat('${p.id}')" class="flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-all border ${isActive ? 'bg-indigo-50 border-indigo-100' : 'border-transparent hover:bg-slate-50'} group">
@@ -3783,11 +3833,11 @@ document.addEventListener("DOMContentLoaded", async () => {
          </div>
 
          <!-- Right 2 Panels: Conversations -->
-         <div id="chat-conv-panel" class="md:col-span-2 bg-white border rounded-2xl flex flex-col justify-between overflow-hidden shadow-sm">
+         <div id="chat-conv-panel" class="md:col-span-2 bg-white border rounded-2xl flex flex-col justify-between overflow-hidden shadow-sm" style="${isMobile && !activeChatCollabId ? 'display: none !important;' : ''}">
            <!-- Chat header -->
            <div class="px-4 py-3 border-b flex items-center gap-3 bg-slate-50/80 shrink-0">
              <!-- Mobile back button -->
-             <button class="md:hidden w-8 h-8 rounded-full flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-600 shrink-0" onclick="document.getElementById('chat-list-panel').style.display=''; document.getElementById('chat-conv-panel').style.display='none';" title="Back">
+             <button class="md:hidden w-8 h-8 rounded-full flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-600 shrink-0" onclick="activeChatCollabId = null; renderMessagesPane();" title="Back">
                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
              </button>
              <!-- Partner avatar + online indicator -->
@@ -3805,13 +3855,13 @@ document.addEventListener("DOMContentLoaded", async () => {
              </div>
              <!-- Action buttons -->
              <div class="flex items-center gap-1 shrink-0">
-               <button id="chat-header-voice-btn" onclick="startVoiceCall('${activeChatCollabId}')" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-600 hover:bg-slate-100 border border-transparent hover:border-slate-200 transition-colors" title="Voice Call">
+               <button id="chat-header-voice-btn" onclick="startVoiceCall('${activeChatCollabId}')" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-600 hover:bg-slate-100 border border-transparent hover:border-slate-200 transition-colors" title="Voice Call" ${!activeChatCollabId ? 'disabled' : ''}>
                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
                </button>
-               <button id="chat-header-video-btn" onclick="startVideoCall('${activeChatCollabId}')" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-600 hover:bg-slate-100 border border-transparent hover:border-slate-200 transition-colors" title="Video Call">
+               <button id="chat-header-video-btn" onclick="startVideoCall('${activeChatCollabId}')" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-600 hover:bg-slate-100 border border-transparent hover:border-slate-200 transition-colors" title="Video Call" ${!activeChatCollabId ? 'disabled' : ''}>
                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.723v6.554a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
                </button>
-               <button id="chat-header-schedule-btn" onclick="scheduleMeetingWith('${activeChatCollabId}')" class="w-8 h-8 rounded-full flex items-center justify-center text-indigo-600 hover:bg-indigo-50 border border-transparent hover:border-indigo-100 transition-colors" title="Schedule Meeting">
+               <button id="chat-header-schedule-btn" onclick="scheduleMeetingWith('${activeChatCollabId}')" class="w-8 h-8 rounded-full flex items-center justify-center text-indigo-600 hover:bg-indigo-50 border border-transparent hover:border-indigo-100 transition-colors" title="Schedule Meeting" ${!activeChatCollabId ? 'disabled' : ''}>
                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                </button>
              </div>
@@ -3843,7 +3893,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                         ontouchstart="this._tt=setTimeout(()=>showMsgMenu({preventDefault:()=>{},stopPropagation:()=>{}},event,'${msgId}','${m.senderId}','${activeRoomId}',${safeText}),600)" ontouchend="clearTimeout(this._tt)">
                      <div class="px-3.5 py-2 rounded-2xl text-xs max-w-[78%] leading-relaxed cursor-context-menu select-text
                        ${isMe ? 'bg-indigo-600 text-white rounded-br-sm' : 'bg-slate-100 text-slate-800 rounded-bl-sm'}">
-                       ${m.text}
+                       ${renderMessageBubbleContent(m.text)}
                      </div>
                      <div class="flex items-center gap-1 px-1">
                        <span class="text-[9px] text-slate-400">${isMe ? 'You' : m.senderName} · ${m.time}</span>
@@ -3856,8 +3906,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 
            <!-- Chat inputs -->
            <div class="p-3 border-t bg-white shrink-0">
-             <div class="flex items-center gap-2 bg-slate-100 rounded-full px-4 py-2.5 border border-slate-200/60 focus-within:ring-2 focus-within:ring-indigo-400 focus-within:bg-white transition-all">
-               <input type="text" id="chat-pane-input" class="flex-1 bg-transparent border-none text-xs focus:outline-none placeholder-slate-400 text-slate-800" placeholder="${activeChatCollabId ? 'Type a message...' : 'Select a conversation to start'}" ${!activeChatCollabId ? 'disabled' : ''}>
+             <div class="flex items-center gap-2 bg-slate-100 rounded-full px-4 py-2 border border-slate-200/60 focus-within:ring-2 focus-within:ring-indigo-400 focus-within:bg-white transition-all">
+               <!-- File Upload Button -->
+               <button onclick="triggerChatFileUpload()" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-colors shrink-0" ${!activeChatCollabId ? 'disabled' : ''} title="Upload File/Image">
+                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 11-2.828-2.828l6.414-6.414a4 4 0 015.656 5.656l-6.415 6.415a6 6 0 11-8.486-8.486L10.5 5"/></svg>
+               </button>
+               <input type="file" id="chat-file-upload-input" class="hidden" onchange="handleChatFileUpload(event)">
+               
+               <input type="text" id="chat-pane-input" class="flex-1 bg-transparent border-none text-xs focus:outline-none placeholder-slate-400 text-slate-800 py-1" placeholder="${activeChatCollabId ? 'Type a message...' : 'Select a conversation to start'}" ${!activeChatCollabId ? 'disabled' : ''}>
                <button onclick="sendChatMessage()" class="w-7 h-7 rounded-full flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 transition-colors disabled:opacity-30 disabled:pointer-events-none shrink-0" ${!activeChatCollabId ? 'disabled' : ''} title="Send">
                  <svg class="w-3.5 h-3.5 text-white transform rotate-90" fill="currentColor" viewBox="0 0 20 20"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"></path></svg>
                </button>
@@ -3905,6 +3961,41 @@ document.addEventListener("DOMContentLoaded", async () => {
     const roomId = [currentUser.id, activeChatCollabId].sort().join('_');
     await db.sendMessage(roomId, currentUser.id, currentUser.name, text);
     renderMessagesPane();
+  };
+
+  window.triggerChatFileUpload = function() {
+    const fileInput = document.getElementById('chat-file-upload-input');
+    if (fileInput) fileInput.click();
+  };
+
+  window.handleChatFileUpload = function(event) {
+    const file = event.target.files[0];
+    if (!file || !activeChatCollabId) return;
+
+    // Limit to 5MB
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('File size exceeds the 5MB limit.', 'error');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+      const dataUrl = e.target.result;
+      const roomId = [currentUser.id, activeChatCollabId].sort().join('_');
+      let msgText = dataUrl;
+
+      // If it's not an image, prefix with [FILE]:filename|dataUrl
+      if (!file.type.startsWith('image/')) {
+        msgText = `[FILE]:${file.name}|${dataUrl}`;
+      }
+
+      showToast('Sending attachment...', 'info');
+      await db.sendMessage(roomId, currentUser.id, currentUser.name, msgText);
+      renderMessagesPane();
+      // Clear file input
+      event.target.value = '';
+    };
+    reader.readAsDataURL(file);
   };
 
   // Dismiss any open context menu when clicking elsewhere
