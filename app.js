@@ -615,6 +615,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     await pollUpdates();
   }
 
+  // Track which users are currently online
+  window.onlineUserIds = window.onlineUserIds || new Set();
+
   async function pollUpdates() {
     if (!currentUser) return;
     try {
@@ -715,6 +718,30 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (activeSystemView === 'notifications') renderNotificationsPane();
       }
       window.lastPendingCount = incoming.length;
+
+      // Refresh online statuses
+      db.getOnlineStatuses().then(ids => {
+        window.onlineUserIds = ids;
+        // Refresh online dots in chat list without full re-render
+        if (activeSystemView === 'messages') {
+          const partners = db.getUsers().filter(u => !u.isAdmin && u.id !== currentUser.id);
+          partners.forEach(p => {
+            const dot = document.getElementById(`online-dot-${p.id}`);
+            if (dot) {
+              dot.className = window.onlineUserIds.has(p.id)
+                ? 'absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-white'
+                : 'absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-slate-300 border-2 border-white';
+            }
+          });
+          // Update header status if a chat is open
+          const headerStatus = document.getElementById('chat-header-online-status');
+          if (headerStatus && activeChatCollabId) {
+            const isOnline = window.onlineUserIds.has(activeChatCollabId);
+            headerStatus.textContent = isOnline ? '● Online' : '● Offline';
+            headerStatus.className = isOnline ? 'text-[10px] text-emerald-500 font-semibold' : 'text-[10px] text-slate-400';
+          }
+        }
+      }).catch(() => {});
 
       // Check notifications
       checkScheduleNotifications(meetings);
@@ -3672,14 +3699,29 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       // 5. Update Messages HTML content only if message count or contents changed
       const oldHTML = messagesListContainer.innerHTML;
-      let newHTML = messagesList.map(m => {
+      const _deletedForMe = db.getDeletedForMe(currentUser.id);
+      const _activeRoomId = [currentUser.id, activeChatCollabId].sort().join('_');
+      let newHTML = messagesList.filter(m => !_deletedForMe.has(String(m.id))).map((m, idx, arr) => {
         const isMe = m.senderId === currentUser.id;
+        const isLast = idx === arr.length - 1;
+        const seenTick = isMe ? (m.isRead
+          ? `<span class="text-[9px] font-bold text-indigo-400" title="Seen">✓✓</span>`
+          : `<span class="text-[9px] text-slate-300" title="Delivered">✓</span>`
+        ) : '';
+        const safeText = JSON.stringify(m.text);
+        const msgId = m.id || '';
         return `
-          <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'} space-y-1">
-            <div class="px-4 py-2.5 rounded-2xl text-xs max-w-sm ${isMe ? 'bg-brand-purple text-white rounded-br-none' : 'bg-slate-100 text-slate-800 rounded-bl-none'}">
+          <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'} space-y-0.5"
+               oncontextmenu="showMsgMenu(event,'${msgId}','${m.senderId}','${_activeRoomId}',${safeText})"
+               ontouchstart="this._touchTimer=setTimeout(()=>showMsgMenu({preventDefault:()=>{},stopPropagation:()=>{}},event,'${msgId}','${m.senderId}','${_activeRoomId}',${safeText}),500)"
+               ontouchend="clearTimeout(this._touchTimer)">
+            <div class="px-3.5 py-2 rounded-2xl text-xs max-w-[75%] cursor-pointer select-text ${isMe ? 'bg-indigo-600 text-white rounded-br-sm' : 'bg-slate-100 text-slate-800 rounded-bl-sm'}">
               ${m.text}
             </div>
-            <span class="text-[9px] text-slate-400 px-1">${isMe ? 'You' : m.senderName} • ${m.time}</span>
+            <div class="flex items-center gap-1 px-1">
+              <span class="text-[9px] text-slate-400">${isMe ? 'You' : m.senderName} · ${m.time}</span>
+              ${seenTick}
+            </div>
           </div>
         `;
       }).join('');
@@ -3710,22 +3752,29 @@ document.addEventListener("DOMContentLoaded", async () => {
              <p class="text-[10px] text-slate-400 mt-0.5">${partners.length} connections</p>
            </div>
            <div class="flex-1 overflow-y-auto py-2 px-2 space-y-1">
-             ${partners.map(p => {
+               ${partners.map(p => {
                const isActive = p.id === activeChatCollabId;
+               const isOnline = (window.onlineUserIds || new Set()).has(p.id);
                const room = chats.find(c => c.roomId === `${currentUser.id}_${p.id}` || c.roomId === `${p.id}_${currentUser.id}`);
                const lastText = room && room.messages.length > 0 ? room.messages[room.messages.length - 1].text : "Say hello!";
                const lastMsg = room && room.messages.length > 0 ? room.messages[room.messages.length - 1] : null;
                const lastTime = lastMsg ? lastMsg.time : '';
+               // Unread count: messages from partner that aren't read
+               const unreadCount = room ? (room.messages || []).filter(m => m.senderId !== currentUser.id && !m.isRead).length : 0;
                return `
                  <div id="chat-list-item-${p.id}" onclick="selectActiveChat('${p.id}')" class="flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-all border ${isActive ? 'bg-indigo-50 border-indigo-100' : 'border-transparent hover:bg-slate-50'} group">
                    <div class="relative shrink-0">
                      <div class="w-9 h-9 rounded-full bg-slate-100 border flex items-center justify-center overflow-hidden text-lg">${renderAvatar(p.avatar, 'text-lg', 'w-full h-full object-cover rounded-full')}</div>
+                     <div id="online-dot-${p.id}" class="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full ${isOnline ? 'bg-emerald-400' : 'bg-slate-300'} border-2 border-white"></div>
                    </div>
                    <div class="overflow-hidden flex-1 min-w-0">
-                     <h4 class="text-xs font-semibold text-slate-800 truncate ${isActive ? 'text-indigo-700' : ''}">${p.name}</h4>
+                     <h4 class="text-xs font-semibold truncate ${isActive ? 'text-indigo-700' : 'text-slate-800'}">${p.name}</h4>
                      <p class="text-[10px] text-slate-400 truncate chat-list-last-text">${lastText}</p>
                    </div>
-                   <span class="text-[9px] text-slate-400 shrink-0">${lastTime}</span>
+                   <div class="flex flex-col items-end gap-1 shrink-0">
+                     <span class="text-[9px] text-slate-400">${lastTime}</span>
+                     ${unreadCount > 0 ? `<span class="w-4 h-4 rounded-full bg-indigo-600 text-white text-[8px] font-bold flex items-center justify-center">${unreadCount > 9 ? '9+' : unreadCount}</span>` : ''}
+                   </div>
                  </div>
                `;
              }).join('')}
@@ -3741,12 +3790,17 @@ document.addEventListener("DOMContentLoaded", async () => {
              <button class="md:hidden w-8 h-8 rounded-full flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-600 shrink-0" onclick="document.getElementById('chat-list-panel').style.display=''; document.getElementById('chat-conv-panel').style.display='none';" title="Back">
                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
              </button>
-             <!-- Partner avatar + name -->
+             <!-- Partner avatar + online indicator -->
              <div class="flex items-center gap-2.5 flex-1 min-w-0">
-               <div class="w-8 h-8 rounded-full bg-slate-200 border overflow-hidden flex items-center justify-center text-base shrink-0">${renderAvatar(activePartnerObj ? activePartnerObj.avatar : null, 'text-base', 'w-full h-full object-cover rounded-full')}</div>
+               <div class="relative shrink-0">
+                 <div class="w-8 h-8 rounded-full bg-slate-200 border overflow-hidden flex items-center justify-center text-base">${renderAvatar(activePartnerObj ? activePartnerObj.avatar : null, 'text-base', 'w-full h-full object-cover rounded-full')}</div>
+                 ${activeChatCollabId ? `<div class="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full ${(window.onlineUserIds||new Set()).has(activeChatCollabId) ? 'bg-emerald-400' : 'bg-slate-300'} border-2 border-white"></div>` : ''}
+               </div>
                <div class="min-w-0">
                  <h4 class="font-bold text-sm text-slate-800 truncate" id="chat-header-partner-name">${activePartnerObj ? activePartnerObj.name : 'Select a conversation'}</h4>
-                 <p class="text-[10px] text-slate-400" id="chat-header-partner-section">${activePartnerObj ? activePartnerObj.yearSection : ''}</p>
+                 <div class="flex items-center gap-1.5">
+                   <span id="chat-header-online-status" class="${activeChatCollabId && (window.onlineUserIds||new Set()).has(activeChatCollabId) ? 'text-[10px] text-emerald-500 font-semibold' : 'text-[10px] text-slate-400'}">${activeChatCollabId ? ((window.onlineUserIds||new Set()).has(activeChatCollabId) ? '● Online' : '● Offline') : (activePartnerObj ? activePartnerObj.yearSection : '')}</span>
+                 </div>
                </div>
              </div>
              <!-- Action buttons -->
@@ -3765,23 +3819,39 @@ document.addEventListener("DOMContentLoaded", async () => {
 
            <!-- Chat body messages -->
            <div class="flex-1 overflow-y-auto px-4 py-4 space-y-3" id="chat-messages-container" data-msg-count="${messagesList.length}">
-             ${messagesList.map(m => {
-               const isMe = m.senderId === currentUser.id;
-               return `
-                 <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'} space-y-0.5">
-                   <div class="px-3.5 py-2 rounded-2xl text-xs max-w-[75%] ${isMe ? 'bg-indigo-600 text-white rounded-br-sm' : 'bg-slate-100 text-slate-800 rounded-bl-sm'}">
-                     ${m.text}
-                   </div>
-                   <span class="text-[9px] text-slate-400 px-1">${isMe ? 'You' : m.senderName} · ${m.time}</span>
-                 </div>
-               `;
-             }).join('')}
-             ${messagesList.length === 0 ? `
-               <div class="flex flex-col items-center justify-center h-full text-center text-slate-400 py-12 gap-3">
-                 <div class="text-4xl">💬</div>
-                 <p class="text-xs">No messages yet. Say hi!</p>
-               </div>
-             ` : ''}
+             ${(() => {
+               const deletedSet = db.getDeletedForMe(currentUser.id);
+               const activeRoomId = activeChatCollabId ? [currentUser.id, activeChatCollabId].sort().join('_') : '';
+               const visibleMsgs = messagesList.filter(m => !deletedSet.has(String(m.id)));
+               if (visibleMsgs.length === 0) return `
+                 <div class="flex flex-col items-center justify-center h-full text-center text-slate-400 py-12 gap-3">
+                   <div class="text-4xl">💬</div>
+                   <p class="text-xs">No messages yet. Say hi!</p>
+                 </div>`;
+               return visibleMsgs.map(m => {
+                 const isMe = m.senderId === currentUser.id;
+                 const safeText = JSON.stringify(m.text || '');
+                 const msgId = m.id || '';
+                 const seenTick = isMe
+                   ? (m.isRead
+                     ? '<span class="text-[9px] font-bold text-indigo-500" title="Seen">✓✓</span>'
+                     : '<span class="text-[9px] text-slate-300" title="Delivered">✓</span>')
+                   : '';
+                 return `
+                   <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'} space-y-0.5 group"
+                        oncontextmenu="showMsgMenu(event,'${msgId}','${m.senderId}','${activeRoomId}',${safeText})"
+                        ontouchstart="this._tt=setTimeout(()=>showMsgMenu({preventDefault:()=>{},stopPropagation:()=>{}},event,'${msgId}','${m.senderId}','${activeRoomId}',${safeText}),600)" ontouchend="clearTimeout(this._tt)">
+                     <div class="px-3.5 py-2 rounded-2xl text-xs max-w-[78%] leading-relaxed cursor-context-menu select-text
+                       ${isMe ? 'bg-indigo-600 text-white rounded-br-sm' : 'bg-slate-100 text-slate-800 rounded-bl-sm'}">
+                       ${m.text}
+                     </div>
+                     <div class="flex items-center gap-1 px-1">
+                       <span class="text-[9px] text-slate-400">${isMe ? 'You' : m.senderName} · ${m.time}</span>
+                       ${seenTick}
+                     </div>
+                   </div>`;
+               }).join('');
+             })()}
            </div>
 
            <!-- Chat inputs -->
@@ -3813,6 +3883,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   window.selectActiveChat = function(partnerId) {
     activeChatCollabId = partnerId;
+    // Mark messages as read when opening the chat
+    const roomId = [currentUser.id, partnerId].sort().join('_');
+    db.markMessagesAsRead(roomId, currentUser.id).catch(() => {});
     renderMessagesPane();
     // On mobile: hide list panel, show conversation panel
     if (window.innerWidth < 768) {
@@ -3831,6 +3904,77 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const roomId = [currentUser.id, activeChatCollabId].sort().join('_');
     await db.sendMessage(roomId, currentUser.id, currentUser.name, text);
+    renderMessagesPane();
+  };
+
+  // Dismiss any open context menu when clicking elsewhere
+  document.addEventListener('click', () => {
+    const existing = document.getElementById('msg-context-menu');
+    if (existing) existing.remove();
+  });
+
+  // Show message context menu
+  window.showMsgMenu = function(event, msgId, senderId, roomId, text) {
+    event.preventDefault();
+    event.stopPropagation();
+    const existing = document.getElementById('msg-context-menu');
+    if (existing) existing.remove();
+
+    const isMe = String(senderId) === String(currentUser.id);
+    const menu = document.createElement('div');
+    menu.id = 'msg-context-menu';
+    menu.className = 'fixed z-[9999] bg-white border border-slate-200 rounded-xl shadow-2xl py-1.5 text-xs font-medium overflow-hidden';
+    menu.style.minWidth = '160px';
+
+    const items = [
+      { label: '📋 Copy Text', action: `navigator.clipboard.writeText(${JSON.stringify(text)});document.getElementById('msg-context-menu').remove();showToast('Copied!','info',1500)` },
+      isMe ? { label: '↩️ Unsend (for everyone)', action: `unsendMessage('${roomId}','${msgId}','${senderId}')`, className: 'text-orange-600' } : null,
+      { label: '🗑️ Delete for me', action: `deleteMessageForMe('${roomId}','${msgId}')`, className: 'text-red-500' },
+    ].filter(Boolean);
+
+    menu.innerHTML = items.map(item =>
+      `<button class="w-full text-left px-4 py-2 hover:bg-slate-50 transition-colors ${item.className || 'text-slate-700'}" onclick="${item.action}">${item.label}</button>`
+    ).join('') +
+    `<div class="border-t border-slate-100 mt-1 pt-1">
+      <button class="w-full text-left px-4 py-2 hover:bg-red-50 transition-colors text-red-600" onclick="confirmDeleteConversation('${roomId}')">🗑️ Delete Conversation</button>
+    </div>`;
+
+    // Position relative to click
+    document.body.appendChild(menu);
+    const rect = menu.getBoundingClientRect();
+    let x = event.clientX, y = event.clientY;
+    if (x + rect.width > window.innerWidth) x = window.innerWidth - rect.width - 8;
+    if (y + rect.height > window.innerHeight) y = event.clientY - rect.height;
+    menu.style.left = x + 'px';
+    menu.style.top = y + 'px';
+  };
+
+  window.unsendMessage = async function(roomId, msgId, senderId) {
+    const existing = document.getElementById('msg-context-menu');
+    if (existing) existing.remove();
+    const confirmed = await showConfirm({ title: 'Unsend Message', message: 'Remove this message for everyone?', okLabel: 'Unsend', type: 'danger' });
+    if (!confirmed) return;
+    await db.deleteMessage(roomId, msgId, senderId);
+    showToast('Message unsent.', 'info', 2000);
+    renderMessagesPane();
+  };
+
+  window.deleteMessageForMe = function(roomId, msgId) {
+    const existing = document.getElementById('msg-context-menu');
+    if (existing) existing.remove();
+    db.deleteForMe(roomId, msgId, currentUser.id);
+    showToast('Message hidden for you.', 'info', 2000);
+    renderMessagesPane();
+  };
+
+  window.confirmDeleteConversation = async function(roomId) {
+    const existing = document.getElementById('msg-context-menu');
+    if (existing) existing.remove();
+    const confirmed = await showConfirm({ title: 'Delete Conversation', message: 'This will permanently delete all messages in this conversation for everyone. Continue?', okLabel: 'Delete', type: 'danger' });
+    if (!confirmed) return;
+    await db.deleteConversation(roomId);
+    activeChatCollabId = null;
+    showToast('Conversation deleted.', 'success', 2000);
     renderMessagesPane();
   };
 

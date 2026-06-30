@@ -731,6 +731,63 @@ app.post('/api/chats/:roomId/read', async (req, res) => {
 });
 
 // =============================================
+// ONLINE STATUS BATCH CHECK
+// =============================================
+app.get('/api/users/online-statuses', async (req, res) => {
+  try {
+    const result = await pool.query(
+      "SELECT id, last_active FROM users WHERE last_active > NOW() - INTERVAL '15 seconds'"
+    );
+    const onlineIds = result.rows.map(r => r.id);
+    res.json({ onlineIds });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// =============================================
+// DELETE A SINGLE MESSAGE (Unsend)
+// =============================================
+app.delete('/api/chats/:roomId/messages/:messageId', async (req, res) => {
+  try {
+    const { roomId, messageId } = req.params;
+    const { senderId } = req.body; // only sender can unsend
+
+    // Verify sender owns the message
+    const check = await pool.query(
+      'SELECT sender_id FROM messages WHERE id = $1 AND room_id = $2',
+      [messageId, roomId]
+    );
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Message not found.' });
+    }
+    if (senderId && check.rows[0].sender_id !== senderId) {
+      return res.status(403).json({ error: 'You can only unsend your own messages.' });
+    }
+
+    await pool.query('DELETE FROM messages WHERE id = $1', [messageId]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// =============================================
+// DELETE ENTIRE CONVERSATION (Chat Room)
+// =============================================
+app.delete('/api/chats/:roomId', async (req, res) => {
+  try {
+    const { roomId } = req.params;
+    // Delete all messages first (cascade would also work but let's be explicit)
+    await pool.query('DELETE FROM messages WHERE room_id = $1', [roomId]);
+    await pool.query('DELETE FROM chat_rooms WHERE id = $1', [roomId]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// =============================================
 // BAN/UNBAN MODERATION ROUTES
 // =============================================
 app.post('/api/users/:id/ban', async (req, res) => {

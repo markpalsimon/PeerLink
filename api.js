@@ -931,6 +931,67 @@ const db = {
     } catch (err) {
       console.error('Failed to remove participant:', err.message);
     }
+  },
+
+  // Delete a single message for everyone (unsend) — sender only
+  deleteMessage: async (roomId, messageId, senderId) => {
+    // Remove from local cache
+    const idx = cache.chats.findIndex(c => c.roomId === roomId);
+    if (idx !== -1) {
+      cache.chats[idx].messages = cache.chats[idx].messages.filter(m => String(m.id) !== String(messageId));
+      localStorage.setItem('peerlink_chats', JSON.stringify(cache.chats));
+    }
+    if (isOffline) return { success: true };
+    try {
+      return await apiFetch(`/chats/${roomId}/messages/${messageId}`, {
+        method: 'DELETE',
+        body: JSON.stringify({ senderId })
+      });
+    } catch (err) {
+      console.error('Failed to delete message on backend:', err.message);
+      return { success: true }; // already removed from local cache
+    }
+  },
+
+  // Delete a message only for the current user (local only — hides it from view)
+  deleteForMe: (roomId, messageId, userId) => {
+    const key = `peerlink_deleted_msgs_${userId}`;
+    const deleted = JSON.parse(localStorage.getItem(key) || '[]');
+    if (!deleted.includes(String(messageId))) deleted.push(String(messageId));
+    localStorage.setItem(key, JSON.stringify(deleted));
+    return { success: true };
+  },
+
+  // Get the set of locally-deleted message IDs for a user
+  getDeletedForMe: (userId) => {
+    const key = `peerlink_deleted_msgs_${userId}`;
+    return new Set(JSON.parse(localStorage.getItem(key) || '[]'));
+  },
+
+  // Delete the entire conversation (both sides)
+  deleteConversation: async (roomId) => {
+    // Remove from local cache
+    cache.chats = cache.chats.filter(c => c.roomId !== roomId);
+    localStorage.setItem('peerlink_chats', JSON.stringify(cache.chats));
+    if (isOffline) return { success: true };
+    try {
+      return await apiFetch(`/chats/${roomId}`, { method: 'DELETE' });
+    } catch (err) {
+      console.error('Failed to delete conversation on backend:', err.message);
+      return { success: true };
+    }
+  },
+
+  // Get online status of users (batch check via server)
+  getOnlineStatuses: async () => {
+    if (isOffline) return new Set();
+    try {
+      const res = await apiFetch('/users/online-statuses');
+      return new Set(res.onlineIds || []);
+    } catch (err) {
+      console.error('Failed to fetch online statuses:', err.message);
+      return new Set();
+    }
   }
 };
 
