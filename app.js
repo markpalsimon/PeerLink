@@ -728,7 +728,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           partners.forEach(p => {
             const dot = document.getElementById(`online-dot-${p.id}`);
             if (dot) {
-              dot.className = window.onlineUserIds.has(p.id)
+              dot.className = window.onlineUserIds.has(String(p.id))
                 ? 'absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-white'
                 : 'absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-slate-300 border-2 border-white';
             }
@@ -736,7 +736,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           // Update header status if a chat is open
           const headerStatus = document.getElementById('chat-header-online-status');
           if (headerStatus && activeChatCollabId) {
-            const isOnline = window.onlineUserIds.has(activeChatCollabId);
+            const isOnline = window.onlineUserIds.has(String(activeChatCollabId));
             headerStatus.textContent = isOnline ? '● Online' : '● Offline';
             headerStatus.className = isOnline ? 'text-[10px] text-emerald-500 font-semibold' : 'text-[10px] text-slate-400';
           }
@@ -3703,7 +3703,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     }
 
-    const activePartnerObj = partners.find(p => p.id === activeChatCollabId);
+    const activePartnerObj = partners.find(p => String(p.id) === String(activeChatCollabId));
     
     // Fetch active messages
     const activeRoom = activeChatCollabId ? chats.find(c => 
@@ -3800,7 +3800,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (lastText.startsWith('[FILE]:')) lastText = "📁 Sent a file";
         const itemElement = document.getElementById(`chat-list-item-${p.id}`);
         if (itemElement) {
-          const isActive = p.id === activeChatCollabId;
+          const isActive = String(p.id) === String(activeChatCollabId);
           itemElement.className = `flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all border ${isActive ? 'bg-indigo-50 border-indigo-100' : 'border-transparent hover:bg-slate-50'}`;
           const textElem = itemElement.querySelector(".chat-list-last-text");
           if (textElem) textElem.textContent = lastText;
@@ -3865,8 +3865,8 @@ document.addEventListener("DOMContentLoaded", async () => {
            </div>
            <div class="flex-1 overflow-y-auto py-2 px-2 space-y-1">
                ${partners.map(p => {
-               const isActive = p.id === activeChatCollabId;
-               const isOnline = (window.onlineUserIds || new Set()).has(p.id);
+               const isActive = String(p.id) === String(activeChatCollabId);
+               const isOnline = (window.onlineUserIds || new Set()).has(String(p.id));
                const room = chats.find(c => c.roomId === `${currentUser.id}_${p.id}` || c.roomId === `${p.id}_${currentUser.id}`);
                let lastText = room && room.messages.length > 0 ? room.messages[room.messages.length - 1].text : "Say hello!";
                if (lastText.startsWith('data:image/')) lastText = "📷 Sent an image";
@@ -3907,12 +3907,12 @@ document.addEventListener("DOMContentLoaded", async () => {
              <div class="flex items-center gap-2.5 flex-1 min-w-0">
                <div class="relative shrink-0">
                  <div class="w-8 h-8 rounded-full bg-slate-200 border overflow-hidden flex items-center justify-center text-base">${renderAvatar(activePartnerObj ? activePartnerObj.avatar : null, 'text-base', 'w-full h-full object-cover rounded-full')}</div>
-                 ${activeChatCollabId ? `<div class="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full ${(window.onlineUserIds||new Set()).has(activeChatCollabId) ? 'bg-emerald-400' : 'bg-slate-300'} border-2 border-white"></div>` : ''}
+                 ${activeChatCollabId ? `<div class="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full ${(window.onlineUserIds||new Set()).has(String(activeChatCollabId)) ? 'bg-emerald-400' : 'bg-slate-300'} border-2 border-white"></div>` : ''}
                </div>
                <div class="min-w-0">
                  <h4 class="font-bold text-sm text-slate-800 truncate" id="chat-header-partner-name">${activePartnerObj ? activePartnerObj.name : 'Select a conversation'}</h4>
                  <div class="flex items-center gap-1.5">
-                   <span id="chat-header-online-status" class="${activeChatCollabId && (window.onlineUserIds||new Set()).has(activeChatCollabId) ? 'text-[10px] text-emerald-500 font-semibold' : 'text-[10px] text-slate-400'}">${activeChatCollabId ? ((window.onlineUserIds||new Set()).has(activeChatCollabId) ? '● Online' : '● Offline') : (activePartnerObj ? activePartnerObj.yearSection : '')}</span>
+                   <span id="chat-header-online-status" class="${activeChatCollabId && (window.onlineUserIds||new Set()).has(String(activeChatCollabId)) ? 'text-[10px] text-emerald-500 font-semibold' : 'text-[10px] text-slate-400'}">${activeChatCollabId ? ((window.onlineUserIds||new Set()).has(String(activeChatCollabId)) ? '● Online' : '● Offline') : (activePartnerObj ? activePartnerObj.yearSection : '')}</span>
                  </div>
                </div>
              </div>

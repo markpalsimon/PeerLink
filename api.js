@@ -987,7 +987,7 @@ const db = {
     if (isOffline) return new Set();
     try {
       const res = await apiFetch('/users/online-statuses');
-      return new Set(res.onlineIds || []);
+      return new Set((res.onlineIds || []).map(id => String(id)));
     } catch (err) {
       console.error('Failed to fetch online statuses:', err.message);
       return new Set();

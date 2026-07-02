@@ -428,6 +428,16 @@ body.sidebar-open-body {
     pointer-events: auto !important;
     touch-action: manipulation;
   }
+  /* Fix: Ensure chat buttons are clickable on mobile */
+  #chat-conv-panel button {
+    pointer-events: auto !important;
+    touch-action: manipulation;
+    z-index: 20;
+    position: relative;
+  }
+  #chat-conv-panel button svg {
+    pointer-events: none;
+  }
   /* Ensure message bubbles don't intercept tap events needed for scrolling */
   #chat-messages-container {
     touch-action: pan-y;
