@@ -140,10 +140,13 @@ app.post('/api/auth/register-send-otp', async (req, res) => {
       return res.status(403).json({ success: false, message: 'That Student ID is reserved.' });
     }
 
+    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedStudentId = studentId.trim().toLowerCase();
+
     // Check for duplicate student ID or email
     const existing = await pool.query(
-      'SELECT id FROM users WHERE student_id = $1 OR email = $2',
-      [studentId, email]
+      'SELECT id FROM users WHERE LOWER(student_id) = $1 OR LOWER(email) = $2',
+      [normalizedStudentId, normalizedEmail]
     );
     if (existing.rows.length > 0) {
       return res.status(409).json({ success: false, message: 'Student ID or email already exists.' });
@@ -154,12 +157,12 @@ app.post('/api/auth/register-send-otp', async (req, res) => {
     const expires = Date.now() + 10 * 60 * 1000; // 10 minutes
 
     // Store OTP + registration data in DB so it survives server restarts/sleeps
-    const userData = JSON.stringify({ name, studentId, email, password, program, yearLevel, courses, skills, schedule });
+    const userData = JSON.stringify({ name, studentId: normalizedStudentId, email: normalizedEmail, password, program, yearLevel, courses, skills, schedule });
     await pool.query(
       `INSERT INTO otp_store (email, code, expires_at, user_data)
        VALUES ($1, $2, $3, $4)
        ON CONFLICT (email) DO UPDATE SET code = $2, expires_at = $3, user_data = $4, created_at = NOW()`,
-      [email, otp, expires, userData]
+      [normalizedEmail, otp, expires, userData]
     );
 
     // Respond to client IMMEDIATELY — do NOT await the email
@@ -183,9 +186,10 @@ app.post('/api/auth/register-send-otp', async (req, res) => {
 app.post('/api/auth/register-verify-otp', async (req, res) => {
   try {
     const { email, code } = req.body;
+    const normalizedEmail = email.trim().toLowerCase();
 
     // Look up from DB
-    const otpResult = await pool.query('SELECT * FROM otp_store WHERE email = $1', [email]);
+    const otpResult = await pool.query('SELECT * FROM otp_store WHERE email = $1', [normalizedEmail]);
     const pending = otpResult.rows[0];
 
     if (!pending || !pending.user_data) {
@@ -193,7 +197,7 @@ app.post('/api/auth/register-verify-otp', async (req, res) => {
     }
 
     if (Date.now() > Number(pending.expires_at)) {
-      await pool.query('DELETE FROM otp_store WHERE email = $1', [email]);
+      await pool.query('DELETE FROM otp_store WHERE email = $1', [normalizedEmail]);
       return res.status(400).json({ success: false, message: 'Verification code has expired. Please register again.' });
     }
 
@@ -216,7 +220,7 @@ app.post('/api/auth/register-verify-otp', async (req, res) => {
     );
 
     // Clean up OTP from DB
-    await pool.query('DELETE FROM otp_store WHERE email = $1', [email]);
+    await pool.query('DELETE FROM otp_store WHERE email = $1', [normalizedEmail]);
 
     const result = await pool.query('SELECT * FROM users WHERE id = $1', [newId]);
     await addLog('user', `New user ${name} registered & verified email.`);
@@ -231,7 +235,8 @@ app.post('/api/auth/register-verify-otp', async (req, res) => {
 app.post('/api/auth/forgot-password', async (req, res) => {
   try {
     const { email } = req.body;
-    const result = await pool.query('SELECT id, name FROM users WHERE email = $1', [email]);
+    const normalizedEmail = email.trim().toLowerCase();
+    const result = await pool.query('SELECT id, name FROM users WHERE LOWER(email) = $1', [normalizedEmail]);
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Email address not found.' });
     }
@@ -245,7 +250,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
       `INSERT INTO otp_store (email, code, expires_at)
        VALUES ($1, $2, $3)
        ON CONFLICT (email) DO UPDATE SET code = $2, expires_at = $3, user_data = NULL, created_at = NOW()`,
-      [email, otp, expires]
+      [normalizedEmail, otp, expires]
     );
 
     // Respond to client IMMEDIATELY — do NOT await the email
@@ -269,7 +274,8 @@ app.post('/api/auth/forgot-password', async (req, res) => {
 app.post('/api/auth/verify-forgot-otp', async (req, res) => {
   try {
     const { email, code } = req.body;
-    const result = await pool.query('SELECT * FROM otp_store WHERE email = $1', [email]);
+    const normalizedEmail = email.trim().toLowerCase();
+    const result = await pool.query('SELECT * FROM otp_store WHERE email = $1', [normalizedEmail]);
     const store = result.rows[0];
 
     if (!store) {
@@ -277,7 +283,7 @@ app.post('/api/auth/verify-forgot-otp', async (req, res) => {
     }
 
     if (Date.now() > Number(store.expires_at)) {
-      await pool.query('DELETE FROM otp_store WHERE email = $1', [email]);
+      await pool.query('DELETE FROM otp_store WHERE email = $1', [normalizedEmail]);
       return res.status(400).json({ success: false, message: 'Verification code has expired.' });
     }
 
@@ -296,7 +302,8 @@ app.post('/api/auth/verify-forgot-otp', async (req, res) => {
 app.post('/api/auth/reset-password', async (req, res) => {
   try {
     const { email, code, newPassword } = req.body;
-    const result = await pool.query('SELECT * FROM otp_store WHERE email = $1', [email]);
+    const normalizedEmail = email.trim().toLowerCase();
+    const result = await pool.query('SELECT * FROM otp_store WHERE email = $1', [normalizedEmail]);
     const store = result.rows[0];
 
     if (!store || store.code !== code || Date.now() > Number(store.expires_at)) {
@@ -304,10 +311,13 @@ app.post('/api/auth/reset-password', async (req, res) => {
     }
 
     const passwordHash = await bcrypt.hash(newPassword, 10);
-    await pool.query('UPDATE users SET password_hash = $1 WHERE email = $2', [passwordHash, email]);
+    const updateResult = await pool.query('UPDATE users SET password_hash = $1 WHERE LOWER(email) = $2', [passwordHash, normalizedEmail]);
+    if (updateResult.rowCount === 0) {
+      return res.status(404).json({ success: false, message: 'Account email not found.' });
+    }
 
     // Clean up OTP from DB
-    await pool.query('DELETE FROM otp_store WHERE email = $1', [email]);
+    await pool.query('DELETE FROM otp_store WHERE email = $1', [normalizedEmail]);
 
     res.json({ success: true, message: 'Password has been successfully updated.' });
   } catch (err) {
@@ -320,7 +330,8 @@ app.post('/api/auth/reset-password', async (req, res) => {
 app.get('/api/auth/get-otp', async (req, res) => {
   try {
     const { email } = req.query;
-    const result = await pool.query('SELECT code FROM otp_store WHERE email = $1', [email]);
+    const normalizedEmail = email ? email.trim().toLowerCase() : '';
+    const result = await pool.query('SELECT code FROM otp_store WHERE email = $1', [normalizedEmail]);
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'No code found for this email address.' });
     }

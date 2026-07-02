@@ -1181,8 +1181,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
 
       regData.name = name;
-      regData.studentId = studentId;
-      regData.email = email;
+      regData.studentId = studentId.toLowerCase();
+      regData.email = email.toLowerCase();
       regData.password = pw;
       regData.program = document.getElementById("reg-program").value;
       regData.yearLevel = document.getElementById("reg-year").value;
@@ -1390,7 +1390,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   window.handleForgotEmailSubmit = async function(e) {
     e.preventDefault();
-    const email = document.getElementById("forgot-email").value.trim();
+    const email = document.getElementById("forgot-email").value.trim().toLowerCase();
     if (!email) return;
 
     try {
