@@ -3985,16 +3985,16 @@ document.addEventListener("DOMContentLoaded", async () => {
            </div>
 
            <!-- Chat inputs -->
-           <div class="p-3 border-t bg-white shrink-0">
+           <div id="chat-input-bar" class="p-3 border-t bg-white shrink-0">
              <div class="flex items-center gap-2 bg-slate-100 rounded-full px-4 py-2 border border-slate-200/60 focus-within:ring-2 focus-within:ring-indigo-400 focus-within:bg-white transition-all">
                <!-- File Upload Button -->
-               <button id="chat-upload-btn" onclick="triggerChatFileUpload()" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-colors shrink-0" ${!activeChatCollabId ? 'disabled' : ''} title="Upload File/Image">
+               <button id="chat-upload-btn" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-colors shrink-0" title="Upload File/Image">
                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 11-2.828-2.828l6.414-6.414a4 4 0 015.656 5.656l-6.415 6.415a6 6 0 11-8.486-8.486L10.5 5"/></svg>
                </button>
-               <input type="file" id="chat-file-upload-input" class="hidden" onchange="handleChatFileUpload(event)">
+               <input type="file" id="chat-file-upload-input" class="hidden">
                
                <input type="text" id="chat-pane-input" class="flex-1 bg-transparent border-none text-xs focus:outline-none placeholder-slate-400 text-slate-800 py-1" placeholder="${activeChatCollabId ? 'Type a message...' : 'Select a conversation to start'}" ${!activeChatCollabId ? 'disabled' : ''}>
-               <button id="chat-send-btn" onclick="sendChatMessage()" class="w-7 h-7 rounded-full flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 transition-colors disabled:opacity-30 disabled:pointer-events-none shrink-0" ${!activeChatCollabId ? 'disabled' : ''} title="Send">
+               <button id="chat-send-btn" class="w-7 h-7 rounded-full flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 transition-colors shrink-0 ${!activeChatCollabId ? 'opacity-30' : ''}" title="Send">
                  <svg class="w-3.5 h-3.5 text-white transform rotate-90" fill="currentColor" viewBox="0 0 20 20"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"></path></svg>
                </button>
              </div>
@@ -4008,12 +4008,49 @@ document.addEventListener("DOMContentLoaded", async () => {
     const container = document.getElementById("chat-messages-container");
     if (container) container.scrollTop = container.scrollHeight;
 
-    // Chat enter listener
+    // Bind events via addEventListener (works on mobile regardless of disabled attribute)
     const newChatInput = document.getElementById("chat-pane-input");
     if (newChatInput) {
       newChatInput.addEventListener("keypress", (e) => {
         if (e.key === "Enter") sendChatMessage();
       });
+    }
+
+    // Send button — use both click and touchend for mobile
+    const sendBtnEl = document.getElementById('chat-send-btn');
+    if (sendBtnEl) {
+      sendBtnEl.addEventListener('click', () => { if (activeChatCollabId) sendChatMessage(); });
+      sendBtnEl.addEventListener('touchend', (e) => { e.preventDefault(); if (activeChatCollabId) sendChatMessage(); }, { passive: false });
+    }
+
+    // Upload button — use both click and touchend for mobile
+    const uploadBtnEl = document.getElementById('chat-upload-btn');
+    if (uploadBtnEl) {
+      uploadBtnEl.addEventListener('click', () => { if (activeChatCollabId) triggerChatFileUpload(); });
+      uploadBtnEl.addEventListener('touchend', (e) => { e.preventDefault(); if (activeChatCollabId) triggerChatFileUpload(); }, { passive: false });
+    }
+
+    // File input change
+    const fileInput = document.getElementById('chat-file-upload-input');
+    if (fileInput) {
+      fileInput.addEventListener('change', handleChatFileUpload);
+    }
+
+    // Header action buttons — bind via addEventListener
+    const voiceBtnEl = document.getElementById('chat-header-voice-btn');
+    const videoBtnEl = document.getElementById('chat-header-video-btn');
+    const schedBtnEl = document.getElementById('chat-header-schedule-btn');
+    if (voiceBtnEl) {
+      voiceBtnEl.addEventListener('click', () => { if (activeChatCollabId) startVoiceCall(activeChatCollabId); });
+      voiceBtnEl.addEventListener('touchend', (e) => { e.preventDefault(); if (activeChatCollabId) startVoiceCall(activeChatCollabId); }, { passive: false });
+    }
+    if (videoBtnEl) {
+      videoBtnEl.addEventListener('click', () => { if (activeChatCollabId) startVideoCall(activeChatCollabId); });
+      videoBtnEl.addEventListener('touchend', (e) => { e.preventDefault(); if (activeChatCollabId) startVideoCall(activeChatCollabId); }, { passive: false });
+    }
+    if (schedBtnEl) {
+      schedBtnEl.addEventListener('click', () => { if (activeChatCollabId) scheduleMeetingWith(activeChatCollabId); });
+      schedBtnEl.addEventListener('touchend', (e) => { e.preventDefault(); if (activeChatCollabId) scheduleMeetingWith(activeChatCollabId); }, { passive: false });
     }
   }
 

@@ -455,7 +455,7 @@ body.sidebar-open-body {
     grid-template-columns: 1fr !important;
     height: auto !important;
   }
-  /* Chat list panel: horizontal scrolling strip on mobile */
+  /* Chat list panel span fix */
   #sys-pane-messages .md\:col-span-2 {
     grid-column: span 1 !important;
   }
@@ -468,25 +468,27 @@ body.sidebar-open-body {
   #chat-layout-grid {
     height: calc(100dvh - 8.5rem) !important;
   }
-  /* Conv panel fills full height */
+  /* Conv panel is a flex-column that fills its grid cell */
   #chat-conv-panel {
     height: 100% !important;
     min-height: 0;
+    display: flex !important;
+    flex-direction: column !important;
   }
-  /* Chat body: use flex-1 to fill remaining space */
+  /* Chat body scrolls and fills remaining space */
   #chat-messages-container {
-    flex: 1 1 0%;
-    min-height: 0;
+    flex: 1 1 0% !important;
+    min-height: 0 !important;
     max-height: none !important;
-    overflow-y: auto;
+    overflow-y: auto !important;
   }
-  /* Ensure the input bar at bottom never overflows */
-  #chat-conv-panel > .p-3.border-t {
-    flex-shrink: 0;
-    position: sticky;
-    bottom: 0;
-    background: white;
-    z-index: 5;
+  /* Input bar wrapper: always at bottom, never overlaps */
+  #chat-input-bar {
+    flex-shrink: 0 !important;
+    position: relative !important;
+    z-index: 10 !important;
+    background: white !important;
+    isolation: isolate;
   }
 }
 
