@@ -3821,8 +3821,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         const msgId = m.id || '';
         return `
           <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'} space-y-0.5"
-               onclick="showMsgMenu(event,'${msgId}','${m.senderId}','${_activeRoomId}',${safeText})">
-            <div class="px-3.5 py-2 rounded-2xl text-xs max-w-[75%] cursor-pointer select-text transition-transform active:scale-[0.98] ${isMe ? 'bg-indigo-600 hover:bg-indigo-700 text-white rounded-br-sm' : 'bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-bl-sm'}">
+               data-msg-id="${msgId}" data-sender-id="${m.senderId}" data-room-id="${_activeRoomId}"
+               oncontextmenu="event.preventDefault();showMsgMenu(event,'${msgId}','${m.senderId}','${_activeRoomId}',${safeText})"
+               ontouchstart="window._msgPressTimer=setTimeout(()=>showMsgMenu(event,'${msgId}','${m.senderId}','${_activeRoomId}',${safeText}),600)"
+               ontouchend="clearTimeout(window._msgPressTimer)"
+               ontouchmove="clearTimeout(window._msgPressTimer)">
+            <div class="px-3.5 py-2 rounded-2xl text-xs max-w-[75%] select-text transition-transform active:scale-[0.98] ${isMe ? 'bg-indigo-600 text-white rounded-br-sm' : 'bg-slate-100 text-slate-800 rounded-bl-sm'}">
               ${renderMessageBubbleContent(m.text)}
             </div>
             <div class="flex items-center gap-1 px-1">
@@ -3851,12 +3855,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // If layout does not exist, do a full initial render of the structure
     sysPanes.messages.innerHTML = `
-      <div id="chat-layout-grid" class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 items-stretch" style="height: min(600px, calc(100dvh - 9rem))">
+      <div id="chat-layout-grid" class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 items-stretch" style="height: ${isMobile ? 'calc(100dvh - 8.5rem)' : 'min(600px, calc(100dvh - 9rem))'}">
         
          <!-- Left Panel: Chat List -->
          <div id="chat-list-panel" class="bg-white border rounded-2xl flex flex-col overflow-hidden shadow-sm" style="${isMobile && activeChatCollabId ? 'display: none !important;' : ''}">
            <div class="px-4 pt-4 pb-2 border-b shrink-0">
-             <h3 class="font-heading font-bold text-slate-800 text-sm">Study Rooms</h3>
+             <h3 class="font-heading font-bold text-slate-800 text-sm">Messages</h3>
              <p class="text-[10px] text-slate-400 mt-0.5">${partners.length} connections</p>
            </div>
            <div class="flex-1 overflow-y-auto py-2 px-2 space-y-1">
@@ -3948,8 +3952,11 @@ document.addEventListener("DOMContentLoaded", async () => {
                    : '';
                  return `
                    <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'} space-y-0.5 group"
-                        onclick="showMsgMenu(event,'${msgId}','${m.senderId}','${activeRoomId}',${safeText})">
-                     <div class="px-3.5 py-2 rounded-2xl text-xs max-w-[78%] leading-relaxed cursor-pointer select-text transition-transform active:scale-[0.98]
+                        oncontextmenu="event.preventDefault();showMsgMenu(event,'${msgId}','${m.senderId}','${activeRoomId}',${safeText})"
+                        ontouchstart="window._msgPressTimer=setTimeout(()=>showMsgMenu(event,'${msgId}','${m.senderId}','${activeRoomId}',${safeText}),500)"
+                        ontouchend="clearTimeout(window._msgPressTimer)"
+                        ontouchmove="clearTimeout(window._msgPressTimer)">
+                     <div class="px-3.5 py-2 rounded-2xl text-xs max-w-[78%] leading-relaxed select-text transition-transform active:scale-[0.98]
                        ${isMe ? 'bg-indigo-600 hover:bg-indigo-700 text-white rounded-br-sm' : 'bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-bl-sm'}">
                        ${renderMessageBubbleContent(m.text)}
                      </div>
@@ -4056,24 +4063,24 @@ document.addEventListener("DOMContentLoaded", async () => {
     reader.readAsDataURL(file);
   };
 
-  // Dismiss any open context menu when clicking elsewhere
+  // Dismiss any open context menu when clicking or touching elsewhere
   document.addEventListener('click', () => {
     const existing = document.getElementById('msg-context-menu');
     if (existing) existing.remove();
   });
 
-  // Show message context menu
+  // Show message context menu (works for both right-click and long-press on mobile)
   window.showMsgMenu = function(event, msgId, senderId, roomId, text) {
-    event.preventDefault();
-    event.stopPropagation();
+    if (event && event.preventDefault) event.preventDefault();
+    if (event && event.stopPropagation) event.stopPropagation();
     const existing = document.getElementById('msg-context-menu');
     if (existing) existing.remove();
 
     const isMe = String(senderId) === String(currentUser.id);
     const menu = document.createElement('div');
     menu.id = 'msg-context-menu';
-    menu.className = 'fixed z-[9999] bg-white border border-slate-200 rounded-xl shadow-2xl py-1.5 text-xs font-medium overflow-hidden';
-    menu.style.minWidth = '160px';
+    menu.className = 'fixed z-[9999] bg-white border border-slate-200 rounded-2xl shadow-2xl py-1.5 text-xs font-medium overflow-hidden';
+    menu.style.minWidth = '170px';
 
     const items = [
       { label: '📋 Copy Text', action: `navigator.clipboard.writeText(${JSON.stringify(text)});document.getElementById('msg-context-menu').remove();showToast('Copied!','info',1500)` },
@@ -4082,20 +4089,41 @@ document.addEventListener("DOMContentLoaded", async () => {
     ].filter(Boolean);
 
     menu.innerHTML = items.map(item =>
-      `<button class="w-full text-left px-4 py-2 hover:bg-slate-50 transition-colors ${item.className || 'text-slate-700'}" onclick="${item.action}">${item.label}</button>`
+      `<button class="w-full text-left px-4 py-3 hover:bg-slate-50 active:bg-slate-100 transition-colors ${item.className || 'text-slate-700'}" onclick="${item.action}">${item.label}</button>`
     ).join('') +
     `<div class="border-t border-slate-100 mt-1 pt-1">
-      <button class="w-full text-left px-4 py-2 hover:bg-red-50 transition-colors text-red-600" onclick="confirmDeleteConversation('${roomId}')">🗑️ Delete Conversation</button>
+      <button class="w-full text-left px-4 py-3 hover:bg-red-50 active:bg-red-100 transition-colors text-red-600" onclick="confirmDeleteConversation('${roomId}')">🗑️ Delete Conversation</button>
     </div>`;
 
-    // Position relative to click
+    // Position relative to click or touch (touch events have .touches[0])
     document.body.appendChild(menu);
     const rect = menu.getBoundingClientRect();
-    let x = event.clientX, y = event.clientY;
+    let x, y;
+    if (event && event.clientX !== undefined && event.clientX !== 0) {
+      x = event.clientX; y = event.clientY;
+    } else if (event && event.touches && event.touches[0]) {
+      x = event.touches[0].clientX; y = event.touches[0].clientY;
+    } else {
+      x = window.innerWidth / 2 - 85; y = window.innerHeight / 2;
+    }
     if (x + rect.width > window.innerWidth) x = window.innerWidth - rect.width - 8;
-    if (y + rect.height > window.innerHeight) y = event.clientY - rect.height;
+    if (y + rect.height > window.innerHeight) y = y - rect.height - 4;
+    if (y < 4) y = 4;
     menu.style.left = x + 'px';
     menu.style.top = y + 'px';
+
+    // Dismiss on any touch outside the menu
+    setTimeout(() => {
+      function _dismissOnTouch(e) {
+        if (!menu.contains(e.target)) {
+          menu.remove();
+          document.removeEventListener('touchstart', _dismissOnTouch);
+          document.removeEventListener('click', _dismissOnTouch);
+        }
+      }
+      document.addEventListener('touchstart', _dismissOnTouch, { passive: true });
+      document.addEventListener('click', _dismissOnTouch);
+    }, 100);
   };
 
   window.unsendMessage = async function(roomId, msgId, senderId) {

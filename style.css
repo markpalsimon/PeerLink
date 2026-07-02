@@ -417,6 +417,25 @@ body.sidebar-open-body {
     padding-top: 0.75rem !important;
     padding-bottom: 0.75rem !important;
   }
+  /* But NOT the chat message input -- it has its own tighter padding */
+  #chat-pane-input {
+    padding-top: 0.25rem !important;
+    padding-bottom: 0.25rem !important;
+    min-height: 2rem;
+    -webkit-user-select: text;
+    user-select: text;
+    /* Critical: ensure taps register on the input */
+    pointer-events: auto !important;
+    touch-action: manipulation;
+  }
+  /* Ensure message bubbles don't intercept tap events needed for scrolling */
+  #chat-messages-container {
+    touch-action: pan-y;
+  }
+  /* Remove tap highlight from message rows */
+  #chat-messages-container > div {
+    -webkit-tap-highlight-color: transparent;
+  }
 }
 
 /* ---- Messages pane ---- */
@@ -433,11 +452,31 @@ body.sidebar-open-body {
   /* Fix chat container height on mobile */
   #sys-pane-messages .h-\[600px\] {
     height: 100vh !important;
-    max-height: calc(100dvh - 8rem);
+    max-height: calc(100dvh - 8.5rem);
   }
-  /* Chat body fills remaining space */
+  /* Chat layout fills full screen on mobile */
+  #chat-layout-grid {
+    height: calc(100dvh - 8.5rem) !important;
+  }
+  /* Conv panel fills full height */
+  #chat-conv-panel {
+    height: 100% !important;
+    min-height: 0;
+  }
+  /* Chat body: use flex-1 to fill remaining space */
   #chat-messages-container {
-    max-height: 45vh;
+    flex: 1 1 0%;
+    min-height: 0;
+    max-height: none !important;
+    overflow-y: auto;
+  }
+  /* Ensure the input bar at bottom never overflows */
+  #chat-conv-panel > .p-3.border-t {
+    flex-shrink: 0;
+    position: sticky;
+    bottom: 0;
+    background: white;
+    z-index: 5;
   }
 }
 
