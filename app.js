@@ -1367,7 +1367,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   
   window.handleLoginSubmit = async function(e) {
     e.preventDefault();
-    const email = document.getElementById("login-email").value.trim();
+    const email = document.getElementById("login-email").value.trim().toLowerCase();
     const pw = document.getElementById("login-password").value;
 
     if (email === "admin@school.edu" || email === "admin") {
