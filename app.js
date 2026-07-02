@@ -3763,15 +3763,42 @@ document.addEventListener("DOMContentLoaded", async () => {
         convPanel.style.display = '';
       }
 
-      // Dynamically update input disabled/placeholder state
-      if (chatInput) {
-        if (activeChatCollabId) {
+      // Dynamically update input and button disabled/placeholder states
+      const uploadBtn = document.getElementById("chat-upload-btn");
+      const sendBtn = document.getElementById("chat-send-btn");
+      const schedBtn = document.getElementById("chat-header-schedule-btn");
+      const voiceBtn = document.getElementById("chat-header-voice-btn");
+      const videoBtn = document.getElementById("chat-header-video-btn");
+
+      if (activeChatCollabId) {
+        if (chatInput) {
           chatInput.removeAttribute('disabled');
           chatInput.placeholder = 'Type a message...';
-        } else {
+        }
+        if (uploadBtn) uploadBtn.removeAttribute('disabled');
+        if (sendBtn) sendBtn.removeAttribute('disabled');
+        if (schedBtn) {
+          schedBtn.removeAttribute('disabled');
+          schedBtn.setAttribute("onclick", `scheduleMeetingWith('${activeChatCollabId}')`);
+        }
+        if (voiceBtn) {
+          voiceBtn.removeAttribute('disabled');
+          voiceBtn.setAttribute("onclick", `startVoiceCall('${activeChatCollabId}')`);
+        }
+        if (videoBtn) {
+          videoBtn.removeAttribute('disabled');
+          videoBtn.setAttribute("onclick", `startVideoCall('${activeChatCollabId}')`);
+        }
+      } else {
+        if (chatInput) {
           chatInput.setAttribute('disabled', 'true');
           chatInput.placeholder = 'Select a conversation to start';
         }
+        if (uploadBtn) uploadBtn.setAttribute('disabled', 'true');
+        if (sendBtn) sendBtn.setAttribute('disabled', 'true');
+        if (schedBtn) schedBtn.setAttribute('disabled', 'true');
+        if (voiceBtn) voiceBtn.setAttribute('disabled', 'true');
+        if (videoBtn) videoBtn.setAttribute('disabled', 'true');
       }
 
       // 1. Update Active Partner Header Name and details
@@ -3779,18 +3806,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       const headerSection = document.getElementById("chat-header-partner-section");
       if (headerName) headerName.textContent = activePartnerObj ? activePartnerObj.name : 'Select a conversation';
       if (headerSection) headerSection.textContent = activePartnerObj ? activePartnerObj.yearSection : '';
-
-      // 2. Update Schedule button attributes
-      const schedBtn = document.getElementById("chat-header-schedule-btn");
-      if (schedBtn) {
-        schedBtn.setAttribute("onclick", `scheduleMeetingWith('${activeChatCollabId}')`);
-      }
-
-      // 3. Update Call buttons attributes
-      const voiceBtn = document.getElementById("chat-header-voice-btn");
-      const videoBtn = document.getElementById("chat-header-video-btn");
-      if (voiceBtn) voiceBtn.setAttribute("onclick", `startVoiceCall('${activeChatCollabId}')`);
-      if (videoBtn) videoBtn.setAttribute("onclick", `startVideoCall('${activeChatCollabId}')`);
 
       // 4. Update Left Sidebar Room List last-texts
       partners.forEach(p => {
@@ -3973,13 +3988,13 @@ document.addEventListener("DOMContentLoaded", async () => {
            <div class="p-3 border-t bg-white shrink-0">
              <div class="flex items-center gap-2 bg-slate-100 rounded-full px-4 py-2 border border-slate-200/60 focus-within:ring-2 focus-within:ring-indigo-400 focus-within:bg-white transition-all">
                <!-- File Upload Button -->
-               <button onclick="triggerChatFileUpload()" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-colors shrink-0" ${!activeChatCollabId ? 'disabled' : ''} title="Upload File/Image">
+               <button id="chat-upload-btn" onclick="triggerChatFileUpload()" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-colors shrink-0" ${!activeChatCollabId ? 'disabled' : ''} title="Upload File/Image">
                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 11-2.828-2.828l6.414-6.414a4 4 0 015.656 5.656l-6.415 6.415a6 6 0 11-8.486-8.486L10.5 5"/></svg>
                </button>
                <input type="file" id="chat-file-upload-input" class="hidden" onchange="handleChatFileUpload(event)">
                
                <input type="text" id="chat-pane-input" class="flex-1 bg-transparent border-none text-xs focus:outline-none placeholder-slate-400 text-slate-800 py-1" placeholder="${activeChatCollabId ? 'Type a message...' : 'Select a conversation to start'}" ${!activeChatCollabId ? 'disabled' : ''}>
-               <button onclick="sendChatMessage()" class="w-7 h-7 rounded-full flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 transition-colors disabled:opacity-30 disabled:pointer-events-none shrink-0" ${!activeChatCollabId ? 'disabled' : ''} title="Send">
+               <button id="chat-send-btn" onclick="sendChatMessage()" class="w-7 h-7 rounded-full flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 transition-colors disabled:opacity-30 disabled:pointer-events-none shrink-0" ${!activeChatCollabId ? 'disabled' : ''} title="Send">
                  <svg class="w-3.5 h-3.5 text-white transform rotate-90" fill="currentColor" viewBox="0 0 20 20"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"></path></svg>
                </button>
              </div>
