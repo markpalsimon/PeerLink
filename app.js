@@ -3933,13 +3933,13 @@ document.addEventListener("DOMContentLoaded", async () => {
              </div>
              <!-- Action buttons -->
              <div class="flex items-center gap-1 shrink-0">
-               <button id="chat-header-voice-btn" onclick="startVoiceCall('${activeChatCollabId}')" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-600 hover:bg-slate-100 border border-transparent hover:border-slate-200 transition-colors" title="Voice Call" ${!activeChatCollabId ? 'disabled' : ''}>
+               <button id="chat-header-voice-btn" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-600 hover:bg-slate-100 border border-transparent hover:border-slate-200 transition-colors" title="Voice Call">
                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
                </button>
-               <button id="chat-header-video-btn" onclick="startVideoCall('${activeChatCollabId}')" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-600 hover:bg-slate-100 border border-transparent hover:border-slate-200 transition-colors" title="Video Call" ${!activeChatCollabId ? 'disabled' : ''}>
+               <button id="chat-header-video-btn" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-600 hover:bg-slate-100 border border-transparent hover:border-slate-200 transition-colors" title="Video Call">
                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.723v6.554a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
                </button>
-               <button id="chat-header-schedule-btn" onclick="scheduleMeetingWith('${activeChatCollabId}')" class="w-8 h-8 rounded-full flex items-center justify-center text-indigo-600 hover:bg-indigo-50 border border-transparent hover:border-indigo-100 transition-colors" title="Schedule Meeting" ${!activeChatCollabId ? 'disabled' : ''}>
+               <button id="chat-header-schedule-btn" class="w-8 h-8 rounded-full flex items-center justify-center text-indigo-600 hover:bg-indigo-50 border border-transparent hover:border-indigo-100 transition-colors" title="Schedule Meeting">
                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                </button>
              </div>
