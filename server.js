@@ -99,7 +99,7 @@ app.post('/api/auth/login', async (req, res) => {
 
     // Look up user by student_id or email (works for both admin and students)
     const result = await pool.query(
-      "SELECT *, (last_active > NOW() - INTERVAL '35 seconds') AS is_online FROM users WHERE student_id = $1 OR email = $1",
+      "SELECT *, (last_active > NOW() - INTERVAL '35 seconds') AS is_online FROM users WHERE LOWER(student_id) = LOWER($1) OR LOWER(email) = LOWER($1)",
       [studentId]
     );
 
