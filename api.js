@@ -751,6 +751,19 @@ const db = {
     }
   },
 
+  logout: async (userId) => {
+    if (isOffline) return { success: true };
+    try {
+      return await apiFetch('/users/logout', {
+        method: 'POST',
+        body: JSON.stringify({ userId })
+      });
+    } catch (err) {
+      console.error('Failed to notify logout:', err.message);
+      return { success: false };
+    }
+  },
+
   markMessagesAsRead: async (roomId, userId) => {
     const room = cache.chats.find(c => c.roomId === roomId);
     if (room) {

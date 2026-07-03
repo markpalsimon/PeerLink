@@ -99,7 +99,7 @@ app.post('/api/auth/login', async (req, res) => {
 
     // Look up user by student_id or email (works for both admin and students)
     const result = await pool.query(
-      "SELECT *, (last_active > NOW() - INTERVAL '35 seconds') AS is_online FROM users WHERE LOWER(student_id) = LOWER($1) OR LOWER(email) = LOWER($1)",
+      "SELECT *, (last_active > NOW() - INTERVAL '50 seconds') AS is_online FROM users WHERE LOWER(student_id) = LOWER($1) OR LOWER(email) = LOWER($1)",
       [studentId]
     );
 
@@ -349,7 +349,7 @@ app.get('/api/auth/get-otp', async (req, res) => {
 // GET /api/users — get all users
 app.get('/api/users', async (req, res) => {
   try {
-    const result = await pool.query("SELECT *, (last_active > NOW() - INTERVAL '35 seconds') AS is_online FROM users ORDER BY created_at ASC");
+    const result = await pool.query("SELECT *, (last_active > NOW() - INTERVAL '50 seconds') AS is_online FROM users ORDER BY created_at ASC");
     res.json(result.rows.map(mapUser));
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -359,7 +359,7 @@ app.get('/api/users', async (req, res) => {
 // GET /api/users/:id
 app.get('/api/users/:id', async (req, res) => {
   try {
-    const result = await pool.query("SELECT *, (last_active > NOW() - INTERVAL '35 seconds') AS is_online FROM users WHERE id = $1", [req.params.id]);
+    const result = await pool.query("SELECT *, (last_active > NOW() - INTERVAL '50 seconds') AS is_online FROM users WHERE id = $1", [req.params.id]);
     if (result.rows.length === 0) return res.status(404).json({ error: 'User not found' });
     res.json(mapUser(result.rows[0]));
   } catch (err) {
@@ -690,7 +690,7 @@ app.get('/api/stats', async (req, res) => {
       pool.query("SELECT COUNT(*) FROM connections WHERE status = 'accepted'"),
       pool.query("SELECT COUNT(*) FROM connections WHERE status = 'pending'"),
       pool.query('SELECT COUNT(*) FROM messages'),
-      pool.query("SELECT COUNT(*) FROM users WHERE last_active > NOW() - INTERVAL '10 seconds' AND is_admin = false"),
+      pool.query("SELECT COUNT(*) FROM users WHERE last_active > NOW() - INTERVAL '50 seconds' AND is_admin = false"),
     ]);
     res.json({
       totalUsers:       parseInt(usersR.rows[0].count),
@@ -725,6 +725,19 @@ app.post('/api/users/heartbeat', async (req, res) => {
   }
 });
 
+// POST /api/users/logout - resets last_active to null immediately
+app.post('/api/users/logout', async (req, res) => {
+  try {
+    const { userId } = req.body;
+    if (userId) {
+      await pool.query('UPDATE users SET last_active = NULL WHERE id = $1', [userId]);
+    }
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // =============================================
 // READ/SEEN RECEIPT ROUTE
 // =============================================
@@ -748,7 +761,7 @@ app.post('/api/chats/:roomId/read', async (req, res) => {
 app.get('/api/users/online-statuses', async (req, res) => {
   try {
     const result = await pool.query(
-      "SELECT id, last_active FROM users WHERE last_active > NOW() - INTERVAL '15 seconds'"
+      "SELECT id, last_active FROM users WHERE last_active > NOW() - INTERVAL '50 seconds'"
     );
     const onlineIds = result.rows.map(r => r.id);
     res.json({ onlineIds });

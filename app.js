@@ -577,6 +577,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       okLabel: 'Yes, Log Out'
     });
     if (!confirmed) return;
+    try {
+      if (currentUser) {
+        await db.logout(currentUser.id);
+      }
+    } catch (e) {
+      console.warn("Failed to notify backend of logout:", e);
+    }
     stopSyncLoop();
     localStorage.removeItem("peerlink_session_user");
     currentUser = null;
