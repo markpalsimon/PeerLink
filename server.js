@@ -356,6 +356,58 @@ app.get('/api/users', async (req, res) => {
   }
 });
 
+// =============================================
+// ONLINE STATUS BATCH CHECK
+// IMPORTANT: Must be defined BEFORE /users/:id to prevent Express
+// from matching "online-statuses" as a user :id param
+// =============================================
+app.get('/api/users/online-statuses', async (req, res) => {
+  try {
+    const result = await pool.query(
+      "SELECT id, last_active FROM users WHERE last_active > NOW() - INTERVAL '50 seconds'"
+    );
+    const onlineIds = result.rows.map(r => r.id);
+    res.json({ onlineIds });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// =============================================
+// HEARTBEAT & REAL-TIME STATUS ROUTE
+// IMPORTANT: Must be defined BEFORE /users/:id
+// =============================================
+app.post('/api/users/heartbeat', async (req, res) => {
+  try {
+    const { userId } = req.body;
+    if (!userId) return res.status(400).json({ error: 'userId is required' });
+
+    // Check if banned
+    const checkBan = await pool.query('SELECT is_banned FROM users WHERE id = $1', [userId]);
+    if (checkBan.rows.length > 0 && checkBan.rows[0].is_banned) {
+      return res.json({ success: false, isBanned: true });
+    }
+
+    await pool.query('UPDATE users SET last_active = NOW() WHERE id = $1', [userId]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/users/logout — must be before /users/:id
+app.post('/api/users/logout', async (req, res) => {
+  try {
+    const { userId } = req.body;
+    if (userId) {
+      await pool.query('UPDATE users SET last_active = NULL WHERE id = $1', [userId]);
+    }
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // GET /api/users/:id
 app.get('/api/users/:id', async (req, res) => {
   try {
@@ -705,40 +757,6 @@ app.get('/api/stats', async (req, res) => {
 });
 
 // =============================================
-// HEARTBEAT & REAL-TIME STATUS ROUTE
-// =============================================
-app.post('/api/users/heartbeat', async (req, res) => {
-  try {
-    const { userId } = req.body;
-    if (!userId) return res.status(400).json({ error: 'userId is required' });
-
-    // Check if banned
-    const checkBan = await pool.query('SELECT is_banned FROM users WHERE id = $1', [userId]);
-    if (checkBan.rows.length > 0 && checkBan.rows[0].is_banned) {
-      return res.json({ success: false, isBanned: true });
-    }
-
-    await pool.query('UPDATE users SET last_active = NOW() WHERE id = $1', [userId]);
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// POST /api/users/logout - resets last_active to null immediately
-app.post('/api/users/logout', async (req, res) => {
-  try {
-    const { userId } = req.body;
-    if (userId) {
-      await pool.query('UPDATE users SET last_active = NULL WHERE id = $1', [userId]);
-    }
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// =============================================
 // READ/SEEN RECEIPT ROUTE
 // =============================================
 app.post('/api/chats/:roomId/read', async (req, res) => {
@@ -754,21 +772,7 @@ app.post('/api/chats/:roomId/read', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
-// =============================================
-// ONLINE STATUS BATCH CHECK
-// =============================================
-app.get('/api/users/online-statuses', async (req, res) => {
-  try {
-    const result = await pool.query(
-      "SELECT id, last_active FROM users WHERE last_active > NOW() - INTERVAL '50 seconds'"
-    );
-    const onlineIds = result.rows.map(r => r.id);
-    res.json({ onlineIds });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+// (heartbeat, logout, online-statuses routes moved above /users/:id — see USER ROUTES section)
 
 // =============================================
 // DELETE A SINGLE MESSAGE (Unsend)

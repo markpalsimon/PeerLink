@@ -3872,6 +3872,15 @@ document.addEventListener("DOMContentLoaded", async () => {
         messagesListContainer.scrollTop = messagesListContainer.scrollHeight;
       }
 
+      // Auto-mark incoming messages as read if this chat is currently open
+      if (activeChatCollabId) {
+        const hasUnreadFromPartner = messagesList.some(m => m.senderId !== currentUser.id && !m.isRead);
+        if (hasUnreadFromPartner) {
+          const activeRoomId = [currentUser.id, activeChatCollabId].sort().join('_');
+          db.markMessagesAsRead(activeRoomId, currentUser.id).catch(() => {});
+        }
+      }
+
       return;
     }
 
@@ -4058,6 +4067,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (schedBtnEl) {
       schedBtnEl.addEventListener('click', () => { if (activeChatCollabId) scheduleMeetingWith(activeChatCollabId); });
       schedBtnEl.addEventListener('touchend', (e) => { e.preventDefault(); if (activeChatCollabId) scheduleMeetingWith(activeChatCollabId); }, { passive: false });
+    }
+    // Back button (mobile) — bind touchend too for reliable mobile tap
+    const backBtnEl = document.querySelector('#chat-conv-panel .md\\:hidden');
+    if (backBtnEl) {
+      backBtnEl.addEventListener('click', () => { activeChatCollabId = null; renderMessagesPane(); });
+      backBtnEl.addEventListener('touchend', (e) => { e.preventDefault(); activeChatCollabId = null; renderMessagesPane(); }, { passive: false });
     }
   }
 
