@@ -3866,21 +3866,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!activeChatCollabId && partners.length > 0) {
       // Only auto-select on desktop, leave null on mobile so it shows the list first
       if (window.innerWidth >= 768) {
-        activeChatCollabId = partners[0].id;
-        // Fetch fresh messages for the auto-selected chat
-        const autoRoomId = [currentUser.id, activeChatCollabId].sort().join('_');
-        db.getChatRoom(autoRoomId).catch(() => {});
+        window.selectActiveChat(partners[0].id);
       }
     }
 
     const activePartnerObj = partners.find(p => String(p.id) === String(activeChatCollabId));
 
-    // ── Mobile safety: if partner not found in list, reset selection ──
-    // This prevents the "Select a conversation" header on mobile when
-    // activeChatCollabId is stale or partner hasn't loaded yet
-    if (activeChatCollabId && !activePartnerObj) {
-      activeChatCollabId = null;
-    }
 
     // Fetch active messages
     const activeRoom = activeChatCollabId ? chats.find(c =>
@@ -4248,7 +4239,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     activeChatCollabId = partnerId;
     const roomId = [currentUser.id, partnerId].sort().join('_');
 
-    // On mobile: immediately switch to conversation panel view
+    // On mobile: immediately switch to conversation panel
     if (window.innerWidth < 768) {
       const listPanel = document.getElementById('chat-list-panel');
       const convPanel = document.getElementById('chat-conv-panel');
@@ -4259,17 +4250,29 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Mark messages as read
     db.markMessagesAsRead(roomId, currentUser.id).catch(() => {});
 
-    // Fast first render from cache (may show "No messages yet" briefly if cache is empty)
-    renderMessagesPane();
+    // Show inline loading in message area while fetching from server
+    const existingContainer = document.getElementById('chat-messages-container');
+    if (existingContainer) {
+      existingContainer.innerHTML = `
+        <div class="flex flex-col items-center justify-center h-full text-slate-400 text-xs gap-2">
+          <div class="text-xl animate-spin">⟳</div>
+          <span>Loading messages...</span>
+        </div>
+      `;
+    }
 
-    // Fetch fresh messages from server, then re-render with real data
+    // ALWAYS fetch fresh from server before rendering
+    // This guarantees messages show even on first load / after reload
     try {
       await db.getChatRoom(roomId);
-      renderMessagesPane();
-      // Scroll to bottom after loading
-      const container = document.getElementById('chat-messages-container');
-      if (container) container.scrollTop = container.scrollHeight;
     } catch(e) {}
+
+    // Single authoritative render with fresh server data
+    renderMessagesPane();
+
+    // Scroll to bottom
+    const container = document.getElementById('chat-messages-container');
+    if (container) container.scrollTop = container.scrollHeight;
   };
 
   window.sendChatMessage = async function() {
