@@ -793,7 +793,55 @@ document.addEventListener("DOMContentLoaded", async () => {
       // Check notifications
       checkScheduleNotifications(meetings);
 
-      // Refresh UI based on active panel
+      // ── Sync all active chat rooms from server FIRST, then render ──
+      // This ensures renderMessagesPane() always shows fresh server data
+      // (fixes bug where sent messages weren't visible to receiver)
+      const activePartners = connections.filter(c =>
+        c.status === "accepted" && (c.senderId === currentUser.id || c.receiverId === currentUser.id)
+      ).map(c => c.senderId === currentUser.id ? c.receiverId : c.senderId);
+
+      window._lastRoomMessageIds = window._lastRoomMessageIds || {};
+      let totalUnreadMessages = 0;
+      let hasNewIncoming = false;
+
+      // Step 1: Fetch all chat rooms from the server, update cache
+      await Promise.all(activePartners.map(async (partnerId) => {
+        const roomId = [currentUser.id, partnerId].sort().join('_');
+        try {
+          const room = await db.getChatRoom(roomId);
+          if (room) {
+            const msgs = room.messages || [];
+
+            // Count unread messages
+            const unreadMsgs = msgs.filter(m => m.senderId !== currentUser.id && !m.isRead);
+            totalUnreadMessages += unreadMsgs.length;
+
+            if (msgs.length > 0) {
+              const lastMsg = msgs[msgs.length - 1];
+              const lastMsgId = String(lastMsg.id || lastMsg.time);
+              const prevMsgId = window._lastRoomMessageIds[roomId];
+
+              // Detect a brand-new incoming message
+              if (lastMsg.senderId !== currentUser.id && prevMsgId && prevMsgId !== lastMsgId) {
+                hasNewIncoming = true;
+                // Play notification sound
+                const sound = document.getElementById('notif-sound');
+                if (sound) sound.play().catch(() => {});
+                // Toast if not currently viewing this chat
+                if (activeChatCollabId !== partnerId || activeSystemView !== 'messages') {
+                  let alertText = lastMsg.text;
+                  if (alertText.startsWith('data:image/')) alertText = '📷 Sent an image';
+                  else if (alertText.startsWith('[FILE]:')) alertText = '📁 Sent a file';
+                  showToast(`💬 ${lastMsg.senderName}: "${alertText}"`, 'info', 5000);
+                }
+              }
+              window._lastRoomMessageIds[roomId] = lastMsgId;
+            }
+          }
+        } catch (e) {}
+      }));
+
+      // Step 2: Now render UI with up-to-date cache
       if (activeSystemView === "dashboard") {
         renderDashboardPane();
       } else if (activeSystemView === "matches") {
@@ -805,65 +853,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       } else if (activeSystemView === "messages") {
         renderMessagesPane();
       }
-
-      // Always keep all active chat rooms in sync
-      const activePartners = connections.filter(c => 
-        c.status === "accepted" && (c.senderId === currentUser.id || c.receiverId === currentUser.id)
-      ).map(c => c.senderId === currentUser.id ? c.receiverId : c.senderId);
-
-      window._lastRoomMessageIds = window._lastRoomMessageIds || {};
-      let totalUnreadMessages = 0;
-
-      await Promise.all(activePartners.map(async (partnerId) => {
-        const roomId = [currentUser.id, partnerId].sort().join('_');
-        try {
-          const room = await db.getChatRoom(roomId);
-          if (room) {
-            const msgs = room.messages || [];
-            
-            // Calculate unread messages for this room
-            const unreadMsgs = msgs.filter(m => m.senderId !== currentUser.id && !m.isRead);
-            totalUnreadMessages += unreadMsgs.length;
-
-            if (msgs.length > 0) {
-              const lastMsg = msgs[msgs.length - 1];
-              const lastMsgId = String(lastMsg.id || lastMsg.time);
-              const prevMsgId = window._lastRoomMessageIds[roomId];
-
-              // If it's a new message from the partner
-              if (lastMsg.senderId !== currentUser.id && prevMsgId && prevMsgId !== lastMsgId) {
-                // Play notification sound
-                const sound = document.getElementById('notif-sound');
-                if (sound) sound.play().catch(() => {});
-
-                // Show toast if not actively viewing this chat
-                if (activeChatCollabId !== partnerId || activeSystemView !== 'messages') {
-                  let alertText = lastMsg.text;
-                  if (alertText.startsWith('data:image/')) alertText = '📷 Sent an image';
-                  else if (alertText.startsWith('[FILE]:')) alertText = '📁 Sent a file';
-                  
-                  showToast(`💬 ${lastMsg.senderName}: "${alertText}"`, 'info', 5000);
-                }
-              }
-
-              // Update tracked last message ID
-              window._lastRoomMessageIds[roomId] = lastMsgId;
-            }
-
-            // Real-time update of chat window if open
-            if (activeChatCollabId === partnerId && activeSystemView === 'messages') {
-              const container = document.getElementById('chat-messages-container');
-              if (container) {
-                const currentCount = parseInt(container.getAttribute('data-msg-count') || '-1');
-                if (msgs.length !== currentCount) {
-                  container.setAttribute('data-msg-count', msgs.length);
-                  renderMessagesPane();
-                }
-              }
-            }
-          }
-        } catch (e) {}
-      }));
 
       // Update Messages badges
       const msgBadge = document.getElementById('messages-badge');
@@ -4251,7 +4240,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (input) input.value = '';
 
     const roomId = [currentUser.id, activeChatCollabId].sort().join('_');
+    
+    // Send message (optimistic update to cache + POST to server)
     await db.sendMessage(roomId, currentUser.id, currentUser.name, text);
+    
+    // Re-fetch from server to get the confirmed message with server ID
+    // This ensures the receiver sees the message on their next poll
+    try {
+      await db.getChatRoom(roomId);
+    } catch(e) {}
+    
     renderMessagesPane();
   };
 
@@ -4283,6 +4281,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       showToast('Sending attachment...', 'info');
       await db.sendMessage(roomId, currentUser.id, currentUser.name, msgText);
+      // Refetch from server to ensure receiver sees the message
+      try { await db.getChatRoom(roomId); } catch(e) {}
       renderMessagesPane();
       // Clear file input
       event.target.value = '';
