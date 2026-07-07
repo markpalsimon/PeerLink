@@ -3838,6 +3838,22 @@ document.addEventListener("DOMContentLoaded", async () => {
       return users.find(u => u.id === partnerId);
     }).filter(Boolean);
 
+    // If users haven't loaded from server yet, show loading state and retry
+    if (users.length === 0 || conns.length === 0) {
+      // Show loading only if we don't already have a layout rendered
+      if (!document.getElementById('chat-messages-container')) {
+        sysPanes.messages.innerHTML = `
+          <div class="bg-white border border-slate-200 rounded-2xl p-12 text-center text-slate-400 text-sm">
+            <div class="text-2xl mb-3 animate-spin inline-block">⟳</div>
+            <p>Loading conversations...</p>
+          </div>
+        `;
+        // Retry after 1.5s to let the server response arrive
+        setTimeout(() => { if (activeSystemView === 'messages') renderMessagesPane(); }, 1500);
+      }
+      return;
+    }
+
     if (partners.length === 0) {
       sysPanes.messages.innerHTML = `
         <div class="bg-white border border-slate-200 rounded-2xl p-12 text-center text-slate-500 text-sm">

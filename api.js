@@ -255,11 +255,11 @@ const db = {
   // Legacy aliases — kept for backward compatibility
   getCourses:     () => cache.courses && cache.courses.length > 0 ? cache.courses : DEFAULT_SUBJECTS,
   getSkills:      () => cache.skills  && cache.skills.length  > 0 ? cache.skills  : DEFAULT_SUBJECTS,
-  getUsers:       () => cache.users && cache.users.length > 0 ? cache.users : DEFAULT_USERS,
-  getConnections: () => cache.connections,
-  getChats:       () => cache.chats,
+  getUsers:       () => cache.users || [],
+  getConnections: () => cache.connections || [],
+  getChats:       () => cache.chats || [],
   getLogs:        () => cache.logs && cache.logs.length > 0 ? cache.logs : INITIAL_LOGS,
-  getMeetings:    () => cache.meetings,
+  getMeetings:    () => cache.meetings || [],
 
   // --- Authentication (real hash verification on server, mock on client) ---
   login: async (emailOrId, password) => {
