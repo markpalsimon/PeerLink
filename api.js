@@ -183,11 +183,8 @@ async function initializeDatabase() {
     cache.users = users.map(u => ({ ...u, password: u.password || 'password123' })); // Add default password for client compatibility
     cache.connections = connections;
     
-    // Map chats format if needed
-    cache.chats = chats.map(room => ({
-      roomId: room.room_id,
-      messages: room.messages || []
-    }));
+    // Chats already arrive with correct shape: { roomId, messages: [...] }
+    cache.chats = Array.isArray(chats) ? chats : [];
     
     cache.logs = logs;
     cache.meetings = meetings;

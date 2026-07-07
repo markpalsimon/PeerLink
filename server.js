@@ -710,24 +710,38 @@ app.put('/api/connections/:id', async (req, res) => {
 // CHAT ROUTES
 // =============================================
 
-// GET /api/chats — all rooms (for a user)
+// GET /api/chats — all rooms with full message history
 app.get('/api/chats', async (req, res) => {
   try {
-    // Return all chat room IDs with their latest message
-    const result = await pool.query(`
-      SELECT cr.id as room_id,
-             m.sender_id, m.sender_name, m.text, m.sent_at
-      FROM chat_rooms cr
-      LEFT JOIN LATERAL (
-        SELECT * FROM messages WHERE room_id = cr.id ORDER BY sent_at DESC LIMIT 1
-      ) m ON true
-      ORDER BY m.sent_at DESC NULLS LAST
-    `);
-    res.json(result.rows);
+    // Get all rooms
+    const roomsResult = await pool.query('SELECT id FROM chat_rooms ORDER BY created_at DESC');
+    const rooms = roomsResult.rows;
+
+    // For each room, fetch all messages
+    const result = await Promise.all(rooms.map(async (room) => {
+      const msgsResult = await pool.query(
+        'SELECT * FROM messages WHERE room_id = $1 ORDER BY sent_at ASC',
+        [room.id]
+      );
+      return {
+        roomId: room.id,
+        messages: msgsResult.rows.map(r => ({
+          id:         r.id,
+          senderId:   r.sender_id,
+          senderName: r.sender_name,
+          text:       r.text,
+          time:       new Date(r.sent_at).toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', hour12: false }),
+          isRead:     r.is_read
+        }))
+      };
+    }));
+
+    res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
+
 
 // GET /api/chats/:roomId — messages in a room
 app.get('/api/chats/:roomId', async (req, res) => {
