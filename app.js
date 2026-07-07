@@ -3858,9 +3858,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     const activePartnerObj = partners.find(p => String(p.id) === String(activeChatCollabId));
-    
+
+    // ── Mobile safety: if partner not found in list, reset selection ──
+    // This prevents the "Select a conversation" header on mobile when
+    // activeChatCollabId is stale or partner hasn't loaded yet
+    if (activeChatCollabId && !activePartnerObj) {
+      activeChatCollabId = null;
+    }
+
     // Fetch active messages
-    const activeRoom = activeChatCollabId ? chats.find(c => 
+    const activeRoom = activeChatCollabId ? chats.find(c =>
       c.roomId === `${currentUser.id}_${activeChatCollabId}` ||
       c.roomId === `${activeChatCollabId}_${currentUser.id}`
     ) : null;
@@ -4033,7 +4040,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     sysPanes.messages.innerHTML = `
       <div id="chat-layout-grid" class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 items-stretch" style="height: ${isMobile ? 'calc(100dvh - 8.5rem)' : 'min(600px, calc(100dvh - 9rem))'}">
         
-         <!-- Left Panel: Chat List -->
+        <!-- Left Panel: Chat List -->
          <div id="chat-list-panel" class="bg-white border rounded-2xl flex flex-col overflow-hidden shadow-sm" style="${isMobile && activeChatCollabId ? 'display: none !important;' : ''}">
            <div class="px-4 pt-4 pb-2 border-b shrink-0">
              <h3 class="font-heading font-bold text-slate-800 text-sm">Messages</h3>
@@ -4223,26 +4230,30 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   window.selectActiveChat = async function(partnerId) {
     activeChatCollabId = partnerId;
-    // Mark messages as read when opening the chat
     const roomId = [currentUser.id, partnerId].sort().join('_');
-    db.markMessagesAsRead(roomId, currentUser.id).catch(() => {});
-    
-    // Immediately show what we have in cache (fast first render)
-    renderMessagesPane();
-    
-    // Then fetch fresh messages from server and re-render
-    try {
-      await db.getChatRoom(roomId);
-      renderMessagesPane(); // Re-render with server-fresh data
-    } catch(e) {}
 
-    // On mobile: hide list panel, show conversation panel
+    // On mobile: immediately switch to conversation panel view
     if (window.innerWidth < 768) {
       const listPanel = document.getElementById('chat-list-panel');
       const convPanel = document.getElementById('chat-conv-panel');
-      if (listPanel) listPanel.style.display = 'none';
-      if (convPanel) convPanel.style.display = '';
+      if (listPanel) listPanel.style.setProperty('display', 'none', 'important');
+      if (convPanel) convPanel.style.setProperty('display', 'flex', 'important');
     }
+
+    // Mark messages as read
+    db.markMessagesAsRead(roomId, currentUser.id).catch(() => {});
+
+    // Fast first render from cache (may show "No messages yet" briefly if cache is empty)
+    renderMessagesPane();
+
+    // Fetch fresh messages from server, then re-render with real data
+    try {
+      await db.getChatRoom(roomId);
+      renderMessagesPane();
+      // Scroll to bottom after loading
+      const container = document.getElementById('chat-messages-container');
+      if (container) container.scrollTop = container.scrollHeight;
+    } catch(e) {}
   };
 
   window.sendChatMessage = async function() {
