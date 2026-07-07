@@ -3918,6 +3918,22 @@ document.addEventListener("DOMContentLoaded", async () => {
       // Update display properties for mobile view toggling
       const listPanel = document.getElementById('chat-list-panel');
       const convPanel = document.getElementById('chat-conv-panel');
+      const headerName = document.getElementById('chat-header-partner-name');
+      const headerSection = document.getElementById('chat-header-online-status');
+      const headerStatus = headerSection;
+      
+      // Update partner avatar dynamically
+      const partnerAvatarContainer = convPanel ? convPanel.querySelector('.w-8.h-8') : null;
+      if (partnerAvatarContainer) {
+        partnerAvatarContainer.innerHTML = renderAvatar(activePartnerObj ? activePartnerObj.avatar : null, 'text-base', 'w-full h-full object-cover rounded-full');
+      }
+
+      // Update online dot on header
+      const partnerDot = convPanel ? convPanel.querySelector('.absolute.bottom-0.right-0') : null;
+      if (partnerDot) {
+        const isOnline = activeChatCollabId && (window.onlineUserIds || new Set()).has(String(activeChatCollabId));
+        partnerDot.className = `absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full ${isOnline ? 'bg-emerald-400' : 'bg-slate-300'} border-2 border-white`;
+      }
       if (listPanel && convPanel && isMobile) {
         if (activeChatCollabId) {
           listPanel.style.setProperty('display', 'none', 'important');
