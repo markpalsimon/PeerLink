@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PeerLink - Smart Study Partner Finder with Course, Skill, and Schedule-Based Recommendation System</title>
+  <title>PeerLink - Smart Study Partner Finder with Subject, Skill, and Schedule-Based Recommendation System</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -186,7 +186,7 @@
           </div>
           <div class="overflow-hidden">
             <h4 class="text-sm font-semibold text-white truncate" id="side-username">Juan Dela Cruz</h4>
-            <p class="text-xs text-slate-500 truncate" id="side-program">BSIT Student</p>
+            <p class="text-xs text-slate-500 truncate" id="side-program">Secondary Student</p>
           </div>
         </div>
         <button class="text-slate-500 hover:text-white transition-colors" onclick="logout()" title="Logout">
@@ -246,7 +246,7 @@
             Find the right <br><span class="text-brand-purple">study partner.</span> <br>Achieve more together.
           </h1>
           <p class="text-slate-600 text-lg mb-8 leading-relaxed max-w-xl">
-            PeerLink matches you with students who share your courses, skills, and schedule availability. Form study groups, coordinate schedules, and start video collaborations instantly.
+            PeerLink matches you with students who share your subjects, skills, and schedule availability. Form study groups, coordinate schedules, and start video collaborations instantly.
           </p>
           <div class="flex gap-4 flex-wrap">
             <button class="bg-brand-purple hover:bg-opacity-95 text-white font-bold px-6 py-3 rounded-xl shadow-md transition-all transform hover:-translate-y-0.5" onclick="confirmGetStarted()">
@@ -267,7 +267,7 @@
               <span class="text-2xl">👥</span>
               <div>
                 <h4 class="font-bold text-slate-800">Smart Study Groups</h4>
-                <p class="text-xs text-slate-400">Pamantasan ng Lungsod ng Pasig</p>
+                <p class="text-xs text-slate-400">Secondary Student Portal</p>
               </div>
             </div>
             <!-- Illustration representing students studying -->
@@ -279,7 +279,7 @@
               </div>
               <div class="text-center">
                 <h5 class="font-bold text-sm text-slate-800">Vincent & Maria</h5>
-                <p class="text-xs text-slate-500 mt-1">Shared: 3 Courses • Overlapping Friday Availability</p>
+                <p class="text-xs text-slate-500 mt-1">Shared: 3 Subjects • Overlapping Friday Availability</p>
               </div>
             </div>
             <!-- Features highlights list -->
@@ -306,7 +306,7 @@
         <div class="bg-white p-5 rounded-xl border border-slate-200/70 shadow-sm">
           <div class="text-brand-purple text-2xl mb-3">🎯</div>
           <h4 class="font-bold text-slate-800 text-sm mb-1">Smart Matching</h4>
-          <p class="text-xs text-slate-500">We match based on courses, skills, and availability.</p>
+          <p class="text-xs text-slate-500">We match based on subjects, skills, and availability.</p>
         </div>
         <div class="bg-white p-5 rounded-xl border border-slate-200/70 shadow-sm">
           <div class="text-brand-purple text-2xl mb-3">🔄</div>
@@ -338,9 +338,9 @@
           <div class="bg-white border border-slate-200/70 rounded-3xl p-6 shadow-sm hover:shadow-md transition-all duration-300">
             <div class="w-12 h-12 bg-indigo-50 border border-indigo-100 rounded-2xl flex items-center justify-center text-brand-purple text-2xl mb-5">🎯</div>
             <h3 class="font-heading font-bold text-lg text-slate-800 mb-2">Bilateral Cosine Similarity Matcher</h3>
-            <p class="text-slate-500 text-xs leading-relaxed mb-4">Leverages content-based vector calculations to compare course enrollments, bilateral skill exchange needs, and availability. Recommends highly compatible peers.</p>
+            <p class="text-slate-500 text-xs leading-relaxed mb-4">Leverages content-based vector calculations to compare subject enrollments, bilateral skill exchange needs, and availability. Recommends highly compatible peers.</p>
             <ul class="text-xs text-slate-600 space-y-2 border-t pt-4">
-              <li class="flex items-center gap-2"><span class="text-brand-purple font-bold">✓</span> Course syllabus matching</li>
+              <li class="flex items-center gap-2"><span class="text-brand-purple font-bold">✓</span> Subject syllabus matching</li>
               <li class="flex items-center gap-2"><span class="text-brand-purple font-bold">✓</span> Reciprocal teach-learn alignment</li>
               <li class="flex items-center gap-2"><span class="text-brand-purple font-bold">✓</span> Real-time weight configuration</li>
             </ul>
@@ -385,7 +385,7 @@
           <div class="space-y-4">
             <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white font-extrabold flex items-center justify-center shadow-md">1</div>
             <h3 class="font-heading font-bold text-base text-slate-800">Register & Define Profile</h3>
-            <p class="text-slate-500 text-xs leading-relaxed">Sign up with your PLP Student ID. Tell us about your active courses and skills you have or wish to learn.</p>
+            <p class="text-slate-500 text-xs leading-relaxed">Sign up with your 12-digit LRN. Tell us about your subjects and what you can help others with.</p>
           </div>
 
           <!-- Step 2 -->
@@ -420,13 +420,13 @@
 
           <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start relative z-10">
             <div class="lg:col-span-2 space-y-6">
-              <span class="text-xs uppercase font-extrabold tracking-wider text-indigo-300 bg-white/10 border border-white/20 rounded-full px-3 py-1">BSIT Capstone Project</span>
+              <span class="text-xs uppercase font-extrabold tracking-wider text-indigo-300 bg-white/10 border border-white/20 rounded-full px-3 py-1">Research Thesis Project</span>
               <h2 class="font-heading font-extrabold text-3xl md:text-4xl">About PeerLink</h2>
               <p class="text-indigo-200/90 text-sm md:text-base leading-relaxed">
-                <strong>PeerLink</strong> is a Smart Study Partner Finder with Course, Skill, and Schedule-Based Recommendation System specifically designed for Information Technology and Computer Science students at the College of Computer Studies, Pamantasan ng Lungsod ng Pasig.
+                <strong>PeerLink</strong> is an AI-Based Student Collaboration System for Secondary Education — a Smart Study Partner Finder with Subject, Skills, and Schedule-Based Recommendation System specifically designed for Junior High School (JHS) and Senior High School (SHS) students under the DepEd K-12 curriculum.
               </p>
               <p class="text-indigo-200/80 text-xs md:text-sm leading-relaxed">
-                By integrating a multi-dimensional recommendation engine based on Cosine Similarity vectors, this system matches students based on syllabus overlap, bilateral skill exchanges, and schedule vacancies. This mitigates social friction, empty student hours, and app fatigue while helping Student Affairs Services (SAS) optimize facility utility and reduce student isolation.
+                By integrating a multi-dimensional recommendation engine based on Cosine Similarity vectors, this system matches students based on subject overlap, bilateral skill exchanges, and schedule availability. This helps secondary students find the right study partner, reduce academic isolation, and improve peer collaboration across all tracks and strands.
               </p>
             </div>
 
@@ -445,7 +445,7 @@
                   <span class="font-medium text-white block">Francis Carl Eguerra</span>
                 </div>
                 <div>
-                  <span class="text-indigo-300 block font-semibold">Date of Capstone</span>
+                  <span class="text-indigo-300 block font-semibold">Date of Thesis Defense</span>
                   <span class="font-medium text-white">June 2026</span>
                 </div>
               </div>
@@ -466,7 +466,7 @@
           <form onsubmit="handleLoginSubmit(event)" class="space-y-4">
             <div>
               <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Email or Student ID</label>
-              <input type="text" id="login-email" class="w-full border border-slate-200 rounded-lg px-4 py-2.5 text-sm focus:border-brand-purple focus:outline-none" placeholder="student@plpasig.edu.ph or admin" required autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="username">
+              <input type="text" id="login-email" class="w-full border border-slate-200 rounded-lg px-4 py-2.5 text-sm focus:border-brand-purple focus:outline-none" placeholder="student@gmail.com or admin" required autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="username">
             </div>
             <div>
               <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Password</label>
@@ -574,10 +574,10 @@
         <!-- Progress Steps -->
         <div class="flex border-b border-brand-borderLight bg-slate-50/70">
           <div class="flex-1 py-4 text-center text-xs font-bold border-r border-brand-borderLight text-brand-purple flex items-center justify-center gap-2" id="reg-step-tab-1">
-            <span class="w-5 h-5 rounded-full bg-brand-purple text-white flex items-center justify-center text-[10px]">1</span> Personal Profiling
+            <span class="w-5 h-5 rounded-full bg-brand-purple text-white flex items-center justify-center text-[10px]">1</span> Academic Profile
           </div>
           <div class="flex-1 py-4 text-center text-xs font-bold border-r border-brand-borderLight text-slate-400 flex items-center justify-center gap-2" id="reg-step-tab-2">
-            <span class="w-5 h-5 rounded-full bg-slate-300 text-white flex items-center justify-center text-[10px]">2</span> Courses & Skills
+            <span class="w-5 h-5 rounded-full bg-slate-300 text-white flex items-center justify-center text-[10px]">2</span> Subjects
           </div>
           <div class="flex-1 py-4 text-center text-xs font-bold border-r border-brand-borderLight text-slate-400 flex items-center justify-center gap-2" id="reg-step-tab-3">
             <span class="w-5 h-5 rounded-full bg-slate-300 text-white flex items-center justify-center text-[10px]">3</span> Availability Schedule
@@ -591,86 +591,137 @@
         <form onsubmit="handleRegistrationSubmit(event)" class="p-8 flex-1 flex flex-col justify-between">
           <div class="flex-1">
             
-            <!-- REGISTER PANEL 1: Academic Profile Details -->
-            <div id="reg-pane-1" class="reg-pane space-y-6">
+            <!-- REGISTER PANEL 1: JHS/SHS Academic Profile -->
+            <div id="reg-pane-1" class="reg-pane space-y-5">
               <div>
                 <h3 class="font-heading font-extrabold text-2xl text-slate-900 mb-1">Create your account</h3>
                 <p class="text-slate-500 text-xs">Join PeerLink and start connecting with study partners!</p>
               </div>
-              
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="space-y-4">
-                  <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Full Name</label>
-                    <input type="text" id="reg-name" class="w-full border border-slate-200 rounded-lg px-4 py-2.5 text-sm focus:border-brand-purple focus:outline-none" placeholder="Juan Dela Cruz" required>
-                  </div>
-                  <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Student ID</label>
-                    <input type="text" id="reg-student-id" class="w-full border border-slate-200 rounded-lg px-4 py-2.5 text-sm focus:border-brand-purple focus:outline-none" placeholder="24-87654" pattern="\d{2}-\d{5}" title="Format must be YY-NNNNN (e.g., 24-87654)" required autocapitalize="none" autocorrect="off" spellcheck="false">
-                  </div>
-                  <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Email</label>
-                    <input type="email" id="reg-email" class="w-full border border-slate-200 rounded-lg px-4 py-2.5 text-sm focus:border-brand-purple focus:outline-none" placeholder="student@gmail.com" required autocapitalize="none" autocorrect="off" spellcheck="false">
-                  </div>
+
+              <!-- Row 1: Education Level -->
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wide">Education Level <span class="text-red-500">*</span></label>
+                <div class="flex gap-3">
+                  <button type="button" id="reg-level-jhs" onclick="selectEducationLevel('JHS')"
+                    class="flex-1 py-2.5 rounded-lg border-2 border-slate-200 text-sm font-bold text-slate-500 hover:border-brand-purple hover:text-brand-purple transition-all">
+                    🏫 Junior High School
+                  </button>
+                  <button type="button" id="reg-level-shs" onclick="selectEducationLevel('SHS')"
+                    class="flex-1 py-2.5 rounded-lg border-2 border-slate-200 text-sm font-bold text-slate-500 hover:border-brand-purple hover:text-brand-purple transition-all">
+                    🎓 Senior High School
+                  </button>
                 </div>
-                
-                <div class="space-y-4">
+                <input type="hidden" id="reg-education-level" required>
+              </div>
+
+              <!-- Row 2: Full Name + LRN -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Full Name <span class="text-red-500">*</span></label>
+                  <input type="text" id="reg-name" class="w-full border border-slate-200 rounded-lg px-4 py-2.5 text-sm focus:border-brand-purple focus:outline-none" placeholder="Juan Dela Cruz" required>
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Student LRN <span class="text-red-500">*</span></label>
+                  <input type="text" id="reg-student-lrn" maxlength="12" inputmode="numeric"
+                    class="w-full border border-slate-200 rounded-lg px-4 py-2.5 text-sm focus:border-brand-purple focus:outline-none font-mono tracking-widest"
+                    placeholder="123456789012" pattern="\d{12}" title="LRN must be exactly 12 numeric digits"
+                    required autocapitalize="none" autocorrect="off" spellcheck="false">
+                  <p class="text-[10px] text-slate-400 mt-1">12-digit DepEd Learner Reference Number (LRN)</p>
+                </div>
+              </div>
+
+              <!-- Row 3: School Name + Grade Level -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">School Name <span class="text-red-500">*</span></label>
+                  <input type="text" id="reg-school-name" list="reg-school-datalist"
+                    class="w-full border border-slate-200 rounded-lg px-4 py-2.5 text-sm focus:border-brand-purple focus:outline-none"
+                    placeholder="e.g. Rizal High School" required autocomplete="off">
+                  <datalist id="reg-school-datalist"><!-- populated by JS --></datalist>
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Grade Level <span class="text-red-500">*</span></label>
+                  <select id="reg-grade-level" class="w-full border border-slate-200 rounded-lg px-4 py-2.5 text-sm focus:border-brand-purple focus:outline-none" required>
+                    <option value="" disabled selected>Select grade...</option>
+                    <option class="jhs-option" value="Grade 7">Grade 7</option>
+                    <option class="jhs-option" value="Grade 8">Grade 8</option>
+                    <option class="jhs-option" value="Grade 9">Grade 9</option>
+                    <option class="jhs-option" value="Grade 10">Grade 10</option>
+                    <option class="shs-option" value="Grade 11">Grade 11</option>
+                    <option class="shs-option" value="Grade 12">Grade 12</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Row 4: Section + Track/Strand (SHS only) -->
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Section <span class="text-red-500">*</span></label>
+                  <input type="text" id="reg-section" class="w-full border border-slate-200 rounded-lg px-4 py-2.5 text-sm focus:border-brand-purple focus:outline-none" placeholder="e.g. Rizal, Section A" required>
+                </div>
+                <div id="reg-track-group" class="hidden">
+                  <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Track <span class="text-red-500">*</span></label>
+                  <select id="reg-track" onchange="updateStrandOptions()" class="w-full border border-slate-200 rounded-lg px-4 py-2.5 text-sm focus:border-brand-purple focus:outline-none">
+                    <option value="" disabled selected>Select track...</option>
+                    <option value="Academic">Academic</option>
+                    <option value="Technical-Vocational-Livelihood">Technical-Vocational-Livelihood (TVL)</option>
+                    <option value="Sports">Sports</option>
+                    <option value="Arts and Design">Arts and Design</option>
+                  </select>
+                </div>
+                <div id="reg-strand-group" class="hidden">
+                  <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Strand <span class="text-red-500">*</span></label>
+                  <select id="reg-strand" class="w-full border border-slate-200 rounded-lg px-4 py-2.5 text-sm focus:border-brand-purple focus:outline-none">
+                    <option value="" disabled selected>Select strand...</option>
+                    <!-- populated by updateStrandOptions() -->
+                  </select>
+                </div>
+              </div>
+
+              <!-- Row 5: Email + Password -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Email Address <span class="text-red-500">*</span></label>
+                  <input type="email" id="reg-email" class="w-full border border-slate-200 rounded-lg px-4 py-2.5 text-sm focus:border-brand-purple focus:outline-none" placeholder="student@gmail.com" required autocapitalize="none" autocorrect="off" spellcheck="false">
+                  <p class="text-[10px] text-slate-400 mt-1">Used to log in. An OTP will be sent here.</p>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
                   <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Course / Program</label>
-                    <select id="reg-program" class="w-full border border-slate-200 rounded-lg px-4 py-2.5 text-sm focus:border-brand-purple focus:outline-none">
-                      <option value="BSIT">Bachelor of Science in Information Technology</option>
-                      <option value="BSCS">Bachelor of Science in Computer Science</option>
-                      <option value="BSCPE">Bachelor of Science in Computer Engineering</option>
-                      <option value="BSA">Bachelor of Science in Accountancy</option>
-                    </select>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Password <span class="text-red-500">*</span></label>
+                    <input type="password" id="reg-password" class="w-full border border-slate-200 rounded-lg px-4 py-2.5 text-sm focus:border-brand-purple focus:outline-none" placeholder="••••••••" required>
                   </div>
                   <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Year Level</label>
-                    <select id="reg-year" class="w-full border border-slate-200 rounded-lg px-4 py-2.5 text-sm focus:border-brand-purple focus:outline-none">
-                      <option value="1st Year">1st Year</option>
-                      <option value="2nd Year">2nd Year</option>
-                      <option value="3rd Year">3rd Year</option>
-                      <option value="4th Year">4th Year</option>
-                    </select>
-                  </div>
-                  <div class="grid grid-cols-2 gap-4">
-                    <div>
-                      <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Password</label>
-                      <input type="password" id="reg-password" class="w-full border border-slate-200 rounded-lg px-4 py-2 text-sm focus:border-brand-purple focus:outline-none" placeholder="••••••••" required>
-                    </div>
-                    <div>
-                      <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Confirm Password</label>
-                      <input type="password" id="reg-password-confirm" class="w-full border border-slate-200 rounded-lg px-4 py-2 text-sm focus:border-brand-purple focus:outline-none" placeholder="••••••••" required>
-                    </div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Confirm <span class="text-red-500">*</span></label>
+                    <input type="password" id="reg-password-confirm" class="w-full border border-slate-200 rounded-lg px-4 py-2.5 text-sm focus:border-brand-purple focus:outline-none" placeholder="••••••••" required>
                   </div>
                 </div>
               </div>
             </div>
 
-            <!-- REGISTER PANEL 2: Courses & Skills selection -->
+            <!-- REGISTER PANEL 2: Subjects selection -->
             <div id="reg-pane-2" class="reg-pane space-y-6 hidden">
               <div>
-                <h3 class="font-heading font-extrabold text-2xl text-slate-900 mb-1">Academic Interests & Expertise</h3>
-                <p class="text-slate-500 text-xs">Select the courses you are currently enrolled in, and outline your skill matches.</p>
+                <h3 class="font-heading font-extrabold text-2xl text-slate-900 mb-1">Subjects & Expertise</h3>
+                <p class="text-slate-500 text-xs">Select the subjects you need help with and the ones you can help others with.</p>
               </div>
               
               <div class="space-y-4">
                 <div>
-                  <label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wide">Select Enrolled Courses</label>
+                  <label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wide">Subjects You Need Help With</label>
                   <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-48 overflow-y-auto p-3 border rounded-xl bg-slate-50" id="reg-courses-grid">
-                    <!-- JS generated course list -->
+                    <!-- JS generated subject list -->
                   </div>
                 </div>
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wide">Skills You Can Offer (Your strengths)</label>
+                    <label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wide">Subjects You Can Teach / Help With</label>
                     <div class="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto p-3 border rounded-xl bg-slate-50" id="reg-have-skills-grid">
                       <!-- JS generated skills -->
                     </div>
                   </div>
                   <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wide">Skills You Want to Learn (Need help)</label>
+                    <label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wide">Subjects You Want to Improve In</label>
                     <div class="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto p-3 border rounded-xl bg-slate-50" id="reg-want-skills-grid">
                       <!-- JS generated skills -->
                     </div>
@@ -738,8 +789,8 @@
   <!-- PUBLIC FOOTER -->
   <footer id="public-footer" class="bg-white border-t border-brand-borderLight py-8 text-center text-xs text-slate-500 shrink-0">
     <div class="max-w-7xl mx-auto px-4 md:px-6">
-      <p class="font-semibold text-slate-700">PeerLink © 2026. A BSIT Capstone Project.</p>
-      <p class="mt-1 text-slate-400">College of Computer Studies, Pamantasan ng Lungsod ng Pasig.</p>
+      <p class="font-semibold text-slate-700">PeerLink © 2026. An AI-Based Student Collaboration System for Secondary Education.</p>
+      <p class="mt-1 text-slate-400">Pamantasan ng Lungsod ng Pasig — Research Thesis Project.</p>
       <p class="mt-2 font-mono text-[10px]">Mark Vincent Palsimon • John Kris Rivera • Francis Carl Eguerra | Adviser: Noreen A. Perez, DIT</p>
     </div>
   </footer>

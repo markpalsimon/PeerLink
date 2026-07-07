@@ -48,6 +48,12 @@ pool.connect((err, client, release) => {
 app.use(cors());
 app.use(express.json());
 
+// Request logger middleware
+app.use((req, res, next) => {
+  console.log(`[REQUEST] ${req.method} ${req.url}`, req.method === 'POST' || req.method === 'PUT' ? req.body : '');
+  next();
+});
+
 // Serve static files from the project root
 app.use(express.static(path.join(__dirname)));
 
@@ -65,46 +71,88 @@ async function addLog(type, message) {
 // =============================================
 // HELPER: Map DB row -> frontend user object
 // =============================================
+// Safely parse a value that may be a JSON string, array, or object
+function safeParse(val, fallback) {
+  if (val === null || val === undefined) return fallback;
+  if (typeof val === 'string') {
+    try { return JSON.parse(val); } catch { return fallback; }
+  }
+  return val;
+}
+
 function mapUser(row) {
   const isOnlineDb = row.is_online !== undefined ? row.is_online : null;
+
+  // Parse JSON/JSONB columns — PostgreSQL may return them as strings
+  const subjectsNeedHelp = safeParse(row.subjects_need_help, []);
+  const subjectsCanHelp  = safeParse(row.subjects_can_help,  []);
+  const studySchedule    = safeParse(row.study_schedule,     {});
+
+  // Normalise subjectsCanHelp to {have, want} object for legacy client code
+  let skillsObj;
+  if (Array.isArray(subjectsCanHelp)) {
+    skillsObj = { have: subjectsCanHelp, want: subjectsNeedHelp };
+  } else if (subjectsCanHelp && typeof subjectsCanHelp === 'object') {
+    skillsObj = { have: subjectsCanHelp.have || [], want: subjectsCanHelp.want || [] };
+  } else {
+    skillsObj = { have: [], want: [] };
+  }
+
   return {
-    id:          row.id,
-    studentId:   row.student_id,
-    name:        row.name,
-    email:       row.email,
-    program:     row.program,
-    yearSection: row.year_section,
-    avatar:      row.avatar,
-    bio:         row.bio,
-    birthday:    row.birthday || '',
-    address:     row.address || '',
-    contactInfo: row.contact_info || '',
-    isBanned:    row.is_banned || false,
-    isOnline:    isOnlineDb !== null ? isOnlineDb : (row.last_active ? (Math.abs(Date.now() - new Date(row.last_active).getTime()) < 60000) : false),
-    courses:     row.courses,
-    skills:      row.skills,
-    schedule:    row.schedule,
-    isAdmin:     row.is_admin,
+    id:               row.id,
+    // JHS/SHS fields
+    studentLrn:       row.student_lrn,
+    schoolName:       row.school_name,
+    educationLevel:   row.education_level,
+    gradeLevel:       row.grade_level,
+    section:          row.section,
+    track:            row.track   || null,
+    strand:           row.strand  || null,
+    // Core fields
+    name:             row.name,
+    email:            row.email,
+    avatar:           row.avatar,
+    bio:              row.bio,
+    birthday:         row.birthday     || '',
+    address:          row.address      || '',
+    contactInfo:      row.contact_info || '',
+    isBanned:         row.is_banned    || false,
+    isOnline:         isOnlineDb !== null ? isOnlineDb : (row.last_active ? (Math.abs(Date.now() - new Date(row.last_active).getTime()) < 60000) : false),
+    // Subject fields (parsed)
+    subjectsNeedHelp: subjectsNeedHelp,
+    subjectsCanHelp:  subjectsCanHelp,
+    studySchedule:    studySchedule,
+    isAdmin:          row.is_admin,
+    // Legacy aliases (keeps existing client-side code from breaking)
+    studentId:        row.student_lrn,
+    program:          row.school_name,
+    yearSection:      row.grade_level  || '',
+    courses:          subjectsNeedHelp,
+    skills:           skillsObj,
+    schedule:         studySchedule,
   };
 }
+
 
 // =============================================
 // AUTH ROUTES
 // =============================================
 
 // POST /api/auth/login
+// Login uses email + password (LRN is for records only, not login)
 app.post('/api/auth/login', async (req, res) => {
   try {
-    const { studentId, password } = req.body;
+    const { studentId, password } = req.body; // studentId field holds the email value from client
+    const identifier = (studentId || '').trim();
 
-    // Look up user by student_id or email (works for both admin and students)
+    // Look up user by email (primary) or by student_lrn (legacy/admin fallback)
     const result = await pool.query(
-      "SELECT *, (last_active > NOW() - INTERVAL '50 seconds') AS is_online FROM users WHERE LOWER(student_id) = LOWER($1) OR LOWER(email) = LOWER($1)",
-      [studentId]
+      "SELECT *, (last_active > NOW() - INTERVAL '50 seconds') AS is_online FROM users WHERE LOWER(email) = LOWER($1) OR LOWER(student_lrn) = LOWER($1)",
+      [identifier]
     );
 
     if (result.rows.length === 0) {
-      return res.status(401).json({ success: false, message: 'Account not found. Check your Email/Student ID.' });
+      return res.status(401).json({ success: false, message: 'Account not found. Check your Email address.' });
     }
 
     const user = result.rows[0];
@@ -133,31 +181,50 @@ app.post('/api/auth/login', async (req, res) => {
 // POST /api/auth/register-send-otp
 app.post('/api/auth/register-send-otp', async (req, res) => {
   try {
-    const { name, studentId, email, password, program, yearLevel, courses, skills, schedule } = req.body;
+    const {
+      name, studentLrn, email, password,
+      schoolName, educationLevel, gradeLevel, section, track, strand,
+      subjectsNeedHelp, subjectsCanHelp, studySchedule
+    } = req.body;
 
-    // Block reserved admin ID
-    if (studentId === 'admin') {
-      return res.status(403).json({ success: false, message: 'That Student ID is reserved.' });
+    // Validate LRN: must be exactly 12 numeric digits
+    const lrnPattern = /^\d{12}$/;
+    if (!lrnPattern.test((studentLrn || '').trim())) {
+      return res.status(400).json({ success: false, message: 'Student LRN must be exactly 12 numeric digits.' });
+    }
+
+    // SHS users must have track and strand
+    if (educationLevel === 'SHS' && (!track || !strand)) {
+      return res.status(400).json({ success: false, message: 'SHS students must provide a Track and Strand.' });
     }
 
     const normalizedEmail = email.trim().toLowerCase();
-    const normalizedStudentId = studentId.trim().toLowerCase();
+    const normalizedLrn   = studentLrn.trim();
 
-    // Check for duplicate student ID or email
+    // Check for duplicate LRN or email
     const existing = await pool.query(
-      'SELECT id FROM users WHERE LOWER(student_id) = $1 OR LOWER(email) = $2',
-      [normalizedStudentId, normalizedEmail]
+      'SELECT id FROM users WHERE LOWER(student_lrn) = $1 OR LOWER(email) = $2',
+      [normalizedLrn.toLowerCase(), normalizedEmail]
     );
     if (existing.rows.length > 0) {
-      return res.status(409).json({ success: false, message: 'Student ID or email already exists.' });
+      return res.status(409).json({ success: false, message: 'Student LRN or email already registered.' });
     }
 
     // Generate 6-digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otp     = Math.floor(100000 + Math.random() * 900000).toString();
     const expires = Date.now() + 10 * 60 * 1000; // 10 minutes
 
-    // Store OTP + registration data in DB so it survives server restarts/sleeps
-    const userData = JSON.stringify({ name, studentId: normalizedStudentId, email: normalizedEmail, password, program, yearLevel, courses, skills, schedule });
+    // Store OTP + registration data in DB
+    const userData = JSON.stringify({
+      name, studentLrn: normalizedLrn, email: normalizedEmail, password,
+      schoolName, educationLevel, gradeLevel, section,
+      track:  track  || null,
+      strand: strand || null,
+      subjectsNeedHelp: subjectsNeedHelp || [],
+      subjectsCanHelp:  subjectsCanHelp  || [],
+      studySchedule:    studySchedule    || {},
+    });
+
     await pool.query(
       `INSERT INTO otp_store (email, code, expires_at, user_data)
        VALUES ($1, $2, $3, $4)
@@ -165,10 +232,10 @@ app.post('/api/auth/register-send-otp', async (req, res) => {
       [normalizedEmail, otp, expires, userData]
     );
 
-    // Respond to client IMMEDIATELY — do NOT await the email
+    // Respond to client IMMEDIATELY
     res.json({ success: true, message: 'Verification OTP sent to email.' });
 
-    // Send email in background (fire-and-forget) so slow SMTP never causes client timeout
+    // Send email in background
     sendOTPMail(
       email,
       otp,
@@ -205,25 +272,37 @@ app.post('/api/auth/register-verify-otp', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Incorrect verification code.' });
     }
 
-    const { name, studentId, password, program, yearLevel, courses, skills, schedule } = JSON.parse(pending.user_data);
+    const {
+      name, studentLrn, password,
+      schoolName, educationLevel, gradeLevel, section, track, strand,
+      subjectsNeedHelp, subjectsCanHelp, studySchedule
+    } = JSON.parse(pending.user_data);
+
     const passwordHash = await bcrypt.hash(password, 10);
     const newId = 'student_' + Date.now();
-    const yearSection = `${program} ${yearLevel || ''}`.trim();
 
     await pool.query(
-      `INSERT INTO users (id, student_id, name, email, password_hash, program, year_section, courses, skills, schedule, is_email_verified)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, TRUE)`,
-      [newId, studentId, name, email, passwordHash, program, yearSection,
-       JSON.stringify(courses || []),
-       JSON.stringify(skills || { have: [], want: [] }),
-       JSON.stringify(schedule || {})]
+      `INSERT INTO users (
+         id, student_lrn, name, email, password_hash,
+         school_name, education_level, grade_level, section, track, strand,
+         subjects_need_help, subjects_can_help, study_schedule,
+         is_email_verified
+       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,TRUE)`,
+      [
+        newId, studentLrn, name, normalizedEmail, passwordHash,
+        schoolName || '', educationLevel || null, gradeLevel || null,
+        section || '', track || null, strand || null,
+        JSON.stringify(subjectsNeedHelp || []),
+        JSON.stringify(subjectsCanHelp  || []),
+        JSON.stringify(studySchedule    || {}),
+      ]
     );
 
     // Clean up OTP from DB
     await pool.query('DELETE FROM otp_store WHERE email = $1', [normalizedEmail]);
 
     const result = await pool.query('SELECT * FROM users WHERE id = $1', [newId]);
-    await addLog('user', `New user ${name} registered & verified email.`);
+    await addLog('user', `New user ${name} (${educationLevel || 'N/A'}) registered & verified email.`);
     res.status(201).json({ success: true, user: mapUser(result.rows[0]) });
   } catch (err) {
     console.error('Verify registration OTP error:', err);
@@ -422,7 +501,14 @@ app.get('/api/users/:id', async (req, res) => {
 // PUT /api/users/:id — update profile
 app.put('/api/users/:id', async (req, res) => {
   try {
-    const { name, bio, program, yearSection, avatar, courses, skills, schedule, password, birthday, address, contactInfo } = req.body;
+    const {
+      name, bio, avatar, password, birthday, address, contactInfo,
+      // JHS/SHS fields
+      schoolName, gradeLevel, section, track, strand,
+      subjectsNeedHelp, subjectsCanHelp, studySchedule,
+      // Legacy aliases from old client code
+      program, yearSection, courses, skills, schedule
+    } = req.body;
 
     let passwordHash = undefined;
     if (password) {
@@ -433,18 +519,34 @@ app.put('/api/users/:id', async (req, res) => {
     const values = [];
     let idx = 1;
 
-    if (name        !== undefined) { fields.push(`name = $${idx++}`);         values.push(name); }
-    if (bio         !== undefined) { fields.push(`bio = $${idx++}`);          values.push(bio); }
-    if (program     !== undefined) { fields.push(`program = $${idx++}`);      values.push(program); }
-    if (yearSection !== undefined) { fields.push(`year_section = $${idx++}`); values.push(yearSection); }
-    if (avatar      !== undefined) { fields.push(`avatar = $${idx++}`);       values.push(avatar); }
-    if (birthday    !== undefined) { fields.push(`birthday = $${idx++}`);     values.push(birthday); }
-    if (address     !== undefined) { fields.push(`address = $${idx++}`);      values.push(address); }
-    if (contactInfo !== undefined) { fields.push(`contact_info = $${idx++}`); values.push(contactInfo); }
-    if (courses     !== undefined) { fields.push(`courses = $${idx++}`);      values.push(JSON.stringify(courses)); }
-    if (skills      !== undefined) { fields.push(`skills = $${idx++}`);       values.push(JSON.stringify(skills)); }
-    if (schedule    !== undefined) { fields.push(`schedule = $${idx++}`);     values.push(JSON.stringify(schedule)); }
-    if (passwordHash !== undefined){ fields.push(`password_hash = $${idx++}`);values.push(passwordHash); }
+    if (name        !== undefined) { fields.push(`name = $${idx++}`);               values.push(name); }
+    if (bio         !== undefined) { fields.push(`bio = $${idx++}`);                values.push(bio); }
+    if (avatar      !== undefined) { fields.push(`avatar = $${idx++}`);             values.push(avatar); }
+    if (birthday    !== undefined) { fields.push(`birthday = $${idx++}`);           values.push(birthday); }
+    if (address     !== undefined) { fields.push(`address = $${idx++}`);            values.push(address); }
+    if (contactInfo !== undefined) { fields.push(`contact_info = $${idx++}`);       values.push(contactInfo); }
+
+    // JHS/SHS fields (new names take priority, fall back to legacy aliases)
+    const resolvedSchool   = schoolName    !== undefined ? schoolName   : program;
+    const resolvedGrade    = gradeLevel    !== undefined ? gradeLevel   : yearSection;
+    const resolvedSubjHelp = subjectsNeedHelp !== undefined ? subjectsNeedHelp : courses;
+    const resolvedSubjCan  = subjectsCanHelp  !== undefined ? subjectsCanHelp  : (skills && skills.have ? skills.have : skills);
+    const resolvedSchedule = studySchedule !== undefined ? studySchedule : schedule;
+
+    if (resolvedSchool   !== undefined) { fields.push(`school_name = $${idx++}`);          values.push(resolvedSchool); }
+    if (resolvedGrade    !== undefined) { fields.push(`grade_level = $${idx++}`);           values.push(resolvedGrade); }
+    if (section          !== undefined) { fields.push(`section = $${idx++}`);               values.push(section); }
+    if (track            !== undefined) { fields.push(`track = $${idx++}`);                 values.push(track); }
+    if (strand           !== undefined) { fields.push(`strand = $${idx++}`);                values.push(strand); }
+    if (resolvedSubjHelp !== undefined) { fields.push(`subjects_need_help = $${idx++}`);    values.push(JSON.stringify(resolvedSubjHelp)); }
+    if (resolvedSubjCan  !== undefined) { fields.push(`subjects_can_help = $${idx++}`);     values.push(JSON.stringify(resolvedSubjCan)); }
+    if (resolvedSchedule !== undefined) { fields.push(`study_schedule = $${idx++}`);        values.push(JSON.stringify(resolvedSchedule)); }
+
+    if (passwordHash !== undefined) { fields.push(`password_hash = $${idx++}`); values.push(passwordHash); }
+
+    if (fields.length === 0) {
+      return res.status(400).json({ error: 'No fields to update.' });
+    }
 
     fields.push(`updated_at = NOW()`);
     values.push(req.params.id);
@@ -702,6 +804,24 @@ app.get('/api/skills', async (req, res) => {
   }
 });
 
+// GET /api/subjects — JHS/SHS subjects metadata (primary for new registrations)
+// Optional query param: ?level=JHS or ?level=SHS or ?level=Both (omit for all)
+app.get('/api/subjects', async (req, res) => {
+  try {
+    const { level } = req.query;
+    let query = 'SELECT id, name, level FROM subjects ORDER BY level, name';
+    let params = [];
+    if (level) {
+      query  = "SELECT id, name, level FROM subjects WHERE level = $1 OR level = 'Both' ORDER BY level, name";
+      params = [level];
+    }
+    const result = await pool.query(query, params);
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // =============================================
 // ADMIN LOGS ROUTES
 // =============================================
@@ -737,12 +857,14 @@ app.post('/api/logs', async (req, res) => {
 // =============================================
 app.get('/api/stats', async (req, res) => {
   try {
-    const [usersR, connR, pendingR, messagesR, activeR] = await Promise.all([
+    const [usersR, connR, pendingR, messagesR, activeR, jhsCountR, shsCountR] = await Promise.all([
       pool.query('SELECT COUNT(*) FROM users WHERE is_admin = false'),
       pool.query("SELECT COUNT(*) FROM connections WHERE status = 'accepted'"),
       pool.query("SELECT COUNT(*) FROM connections WHERE status = 'pending'"),
       pool.query('SELECT COUNT(*) FROM messages'),
       pool.query("SELECT COUNT(*) FROM users WHERE last_active > NOW() - INTERVAL '50 seconds' AND is_admin = false"),
+      pool.query("SELECT COUNT(*) FROM users WHERE education_level = 'JHS' AND is_admin = false"),
+      pool.query("SELECT COUNT(*) FROM users WHERE education_level = 'SHS' AND is_admin = false"),
     ]);
     res.json({
       totalUsers:       parseInt(usersR.rows[0].count),
@@ -750,6 +872,8 @@ app.get('/api/stats', async (req, res) => {
       pendingRequests:  parseInt(pendingR.rows[0].count),
       totalMessages:    parseInt(messagesR.rows[0].count),
       activeUsers:      parseInt(activeR.rows[0].count),
+      jhsUsers:         parseInt(jhsCountR.rows[0].count),
+      shsUsers:         parseInt(shsCountR.rows[0].count),
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

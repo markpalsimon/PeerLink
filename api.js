@@ -7,32 +7,29 @@ const API_BASE = window.location.origin + '/api';
 // =============================================
 // GLOBAL METADATA CONSTANTS
 // =============================================
-const DEFAULT_COURSES = [
-  "Web Development 2 (SPA)",
-  "Software Engineering 1",
-  "Database Management Systems 2",
-  "Information Assurance & Security",
-  "Mobile Computing & Android Dev",
-  "Technopreneurship & Ethics",
-  "Quantitative Methods with Modeling",
-  "Discrete Mathematics",
-  "Computer Networks & Cisco 2",
-  "Data Structures & Algorithms"
+// JHS Subjects (DepEd K-12)
+const DEFAULT_SUBJECTS_JHS = [
+  "Mathematics", "Science", "English", "Filipino",
+  "Araling Panlipunan", "Technology and Livelihood Education",
+  "MAPEH", "Edukasyon sa Pagpapakatao (EsP)"
 ];
 
-const DEFAULT_SKILLS = [
-  "HTML / CSS Styling",
-  "JavaScript & Web Tech",
-  "React / Frontend Frameworks",
-  "Node.js Backend / API Design",
-  "SQL & Database Querying",
-  "Python & Machine Learning",
-  "Git & Collaborative Work",
-  "UI/UX Design in Figma",
-  "Technical Writing & Thesis Editing",
-  "Public Speaking & Presentation",
-  "Java & Android Application Dev"
+// SHS Subjects (DepEd K-12)
+const DEFAULT_SUBJECTS_SHS = [
+  "Oral Communication", "Reading and Writing", "Komunikasyon at Pananaliksik",
+  "General Mathematics", "Statistics and Probability", "Earth and Life Science",
+  "Personal Development", "Media and Information Literacy",
+  "Pre-Calculus", "Basic Calculus", "General Physics 1", "General Chemistry 1",
+  "Empowerment Technologies", "Introduction to World Religions",
+  "Creative Writing", "21st Century Literature",
+  "Contemporary Arts from the Regions", "Physical Education and Health"
 ];
+
+const DEFAULT_SUBJECTS = [...DEFAULT_SUBJECTS_JHS, ...DEFAULT_SUBJECTS_SHS];
+
+// Legacy aliases — kept so existing code referencing DEFAULT_COURSES/DEFAULT_SKILLS doesn't break
+const DEFAULT_COURSES = DEFAULT_SUBJECTS;
+const DEFAULT_SKILLS  = DEFAULT_SUBJECTS;
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
@@ -40,169 +37,64 @@ const HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
 const DEFAULT_USERS = [
   {
     id: "student_1",
-    studentId: "24-87654",
+    studentId: "100000000001",
+    studentLrn: "100000000001",
     name: "Mark Vincent Palsimon",
-    email: "24-87654@plpasig.edu.ph",
-    program: "BSIT",
-    yearSection: "BSIT 3A",
+    email: "palsimon_markvincent@plpasig.edu.ph",
+    schoolName: "Rizal High School",
+    program: "Rizal High School",
+    educationLevel: "JHS",
+    gradeLevel: "Grade 10",
+    yearSection: "Grade 10",
+    section: "Sampaguita",
     avatar: "👨‍💻",
-    bio: "Co-author of PeerLink. Focuses on full-stack web dev and database design. Looking for partner to study Advanced Software Engineering concepts and Cisco networking.",
-    courses: ["Web Development 2 (SPA)", "Software Engineering 1", "Database Management Systems 2", "Information Assurance & Security"],
+    bio: "JHS student at Rizal High School. Looking for a study buddy to review Math and Science. I can help with English and Filipino.",
+    subjectsNeedHelp: ["Mathematics", "Science"],
+    courses: ["Mathematics", "Science"],
+    subjectsCanHelp: ["English", "Filipino"],
     skills: {
-      have: ["JavaScript & Web Tech", "React / Frontend Frameworks", "SQL & Database Querying", "Git & Collaborative Work"],
-      want: ["Computer Networks & Cisco 2", "UI/UX Design in Figma", "Python & Machine Learning"]
+      have: ["English", "Filipino"],
+      want: ["Mathematics", "Science"]
+    },
+    studySchedule: {
+      "Monday": [9, 10, 13, 14],
+      "Wednesday": [9, 10, 13, 14]
     },
     schedule: {
-      "Monday": [9, 10, 13, 14, 15],
-      "Wednesday": [9, 10, 13, 14, 15],
-      "Friday": [10, 11, 14, 15, 16, 17],
-      "Saturday": [9, 10, 11, 12]
+      "Monday": [9, 10, 13, 14],
+      "Wednesday": [9, 10, 13, 14]
     }
   },
   {
     id: "student_2",
-    studentId: "23-01108",
+    studentId: "100000000002",
+    studentLrn: "100000000002",
     name: "John Kris Rivera",
-    email: "23-01108@plpasig.edu.ph",
-    program: "BSIT",
-    yearSection: "BSIT 3A",
+    email: "rivera_johnkris@plpasig.edu.ph",
+    schoolName: "Pasig City Science High School",
+    program: "Pasig City Science High School",
+    educationLevel: "SHS",
+    gradeLevel: "Grade 11",
+    yearSection: "Grade 11",
+    section: "STEM-A",
+    track: "Academic",
+    strand: "STEM",
     avatar: "🧑‍💻",
-    bio: "Co-author of PeerLink. Highly interested in Mobile computing, Android development, and UI/UX design. Let's design premium mobile layouts together!",
-    courses: ["Software Engineering 1", "Database Management Systems 2", "Mobile Computing & Android Dev", "Technopreneurship & Ethics"],
+    bio: "SHS STEM student. Interested in General Physics and Calculus. I can help with Empowerment Technologies and Statistics.",
+    subjectsNeedHelp: ["General Physics 1", "Basic Calculus"],
+    courses: ["General Physics 1", "Basic Calculus"],
+    subjectsCanHelp: ["Empowerment Technologies", "Statistics and Probability"],
     skills: {
-      have: ["Java & Android Application Dev", "UI/UX Design in Figma", "HTML / CSS Styling"],
-      want: ["Node.js Backend / API Design", "SQL & Database Querying", "Technical Writing & Thesis Editing"]
+      have: ["Empowerment Technologies", "Statistics and Probability"],
+      want: ["General Physics 1", "Basic Calculus"]
+    },
+    studySchedule: {
+      "Tuesday": [8, 9, 10, 14, 15],
+      "Thursday": [8, 9, 10, 14, 15]
     },
     schedule: {
-      "Tuesday": [8, 9, 10, 14, 15, 16],
-      "Thursday": [8, 9, 10, 14, 15, 16],
-      "Friday": [9, 10, 11, 14, 15, 16],
-      "Saturday": [13, 14, 15, 16, 17]
-    }
-  },
-  {
-    id: "student_3",
-    studentId: "23-01109",
-    name: "Francis Carl Eguerra",
-    email: "23-01109@plpasig.edu.ph",
-    program: "BSIT",
-    yearSection: "BSIT 3A",
-    avatar: "✍️",
-    bio: "Co-author of PeerLink. Specialized in Technical Writing, document formatting, and system analysis. Happy to help you clean up research documentation in exchange for coding tips.",
-    courses: ["Software Engineering 1", "Database Management Systems 2", "Technopreneurship & Ethics", "Quantitative Methods with Modeling"],
-    skills: {
-      have: ["Technical Writing & Thesis Editing", "Public Speaking & Presentation", "Git & Collaborative Work"],
-      want: ["JavaScript & Web Tech", "SQL & Database Querying", "React / Frontend Frameworks"]
-    },
-    schedule: {
-      "Monday": [10, 11, 12, 14, 15],
-      "Tuesday": [13, 14, 15, 16],
-      "Thursday": [13, 14, 15, 16],
-      "Friday": [10, 11, 12, 14, 15]
-    }
-  },
-  {
-    id: "student_4",
-    studentId: "23-01110",
-    name: "Althea Joy Santos",
-    email: "23-01110@plpasig.edu.ph",
-    program: "BSIT",
-    yearSection: "BSIT 3B",
-    avatar: "👩‍💻",
-    bio: "Web developer enthusiast. Working on a personal ecommerce site. Looking for a study buddy for database modeling and setting up SQL constraints.",
-    courses: ["Web Development 2 (SPA)", "Database Management Systems 2", "Data Structures & Algorithms"],
-    skills: {
-      have: ["HTML / CSS Styling", "JavaScript & Web Tech", "React / Frontend Frameworks"],
-      want: ["SQL & Database Querying", "Node.js Backend / API Design", "Git & Collaborative Work"]
-    },
-    schedule: {
-      "Monday": [9, 10, 11, 13, 14],
-      "Tuesday": [9, 10, 11, 15, 16],
-      "Wednesday": [9, 10, 11, 13, 14],
-      "Friday": [13, 14, 15, 16]
-    }
-  },
-  {
-    id: "student_5",
-    studentId: "23-01111",
-    name: "Christian Dave Reyes",
-    email: "23-01111@plpasig.edu.ph",
-    program: "BSIT",
-    yearSection: "BSIT 3B",
-    avatar: "🤖",
-    bio: "Interested in machine learning and Python. Struggling a bit with Mobile Computing (Android studio). Willing to tutor Python/Math in exchange for Android help.",
-    courses: ["Mobile Computing & Android Dev", "Quantitative Methods with Modeling", "Discrete Mathematics"],
-    skills: {
-      have: ["Python & Machine Learning", "SQL & Database Querying", "Public Speaking & Presentation"],
-      want: ["Java & Android Application Dev", "UI/UX Design in Figma", "Git & Collaborative Work"]
-    },
-    schedule: {
-      "Wednesday": [13, 14, 15, 16, 17, 18],
-      "Thursday": [10, 11, 12, 14, 15, 16],
-      "Friday": [14, 15, 16, 17, 18],
-      "Saturday": [10, 11, 12, 13, 14]
-    }
-  },
-  {
-    id: "student_6",
-    studentId: "23-01112",
-    name: "Patricia Mae Cruz",
-    email: "23-01112@plpasig.edu.ph",
-    program: "BSCS",
-    yearSection: "BSCS 3A",
-    avatar: "🧮",
-    bio: "Computer Science major focusing on core algorithms and discrete structures. Need to review networking and information security. Let's study math!",
-    courses: ["Discrete Mathematics", "Data Structures & Algorithms", "Information Assurance & Security"],
-    skills: {
-      have: ["Python & Machine Learning", "SQL & Database Querying", "Git & Collaborative Work"],
-      want: ["Computer Networks & Cisco 2", "React / Frontend Frameworks", "Technical Writing & Thesis Editing"]
-    },
-    schedule: {
-      "Monday": [13, 14, 15, 16],
-      "Tuesday": [10, 11, 12, 14, 15],
-      "Wednesday": [13, 14, 15, 16],
-      "Thursday": [10, 11, 12, 14, 15],
-      "Saturday": [9, 10, 11, 12, 13]
-    }
-  },
-  {
-    id: "student_7",
-    studentId: "23-01113",
-    name: "Jerome Gabriel Aquino",
-    email: "23-01113@plpasig.edu.ph",
-    program: "BSCS",
-    yearSection: "BSCS 3B",
-    avatar: "🕸️",
-    bio: "Working on backends using Node.js and SQL. I have a lot of free time on weekends. Let's collaborate and build project prototypes.",
-    courses: ["Database Management Systems 2", "Data Structures & Algorithms", "Computer Networks & Cisco 2"],
-    skills: {
-      have: ["Node.js Backend / API Design", "SQL & Database Querying", "Git & Collaborative Work", "Java & Android Application Dev"],
-      want: ["UI/UX Design in Figma", "React / Frontend Frameworks", "Public Speaking & Presentation"]
-    },
-    schedule: {
-      "Friday": [15, 16, 17, 18, 19],
-      "Saturday": [8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
-    }
-  },
-  {
-    id: "student_8",
-    studentId: "24-02201",
-    name: "Lhea Coleen Garcia",
-    email: "24-02201@plpasig.edu.ph",
-    program: "BSIT",
-    yearSection: "BSIT 2A",
-    avatar: "🎨",
-    bio: "Second year student eager to learn frontend web dev and Figma. Can help with basic HTML/CSS and slide presentations.",
-    courses: ["Discrete Mathematics", "Data Structures & Algorithms"],
-    skills: {
-      have: ["HTML / CSS Styling", "UI/UX Design in Figma", "Public Speaking & Presentation"],
-      want: ["JavaScript & Web Tech", "Git & Collaborative Work", "SQL & Database Querying"]
-    },
-    schedule: {
-      "Monday": [8, 9, 10, 11],
-      "Tuesday": [13, 14, 15],
-      "Wednesday": [8, 9, 10, 11],
-      "Thursday": [13, 14, 15]
+      "Tuesday": [8, 9, 10, 14, 15],
+      "Thursday": [8, 9, 10, 14, 15]
     }
   }
 ];
@@ -233,10 +125,10 @@ let isOffline = true;
 // HELPER: Fetch API Wrapper
 // =============================================
 async function apiFetch(path, options = {}) {
-  const { timeout = 2000, ...fetchOptions } = options; // allow custom timeout, default 2s
+  const { timeout = 8000, ...fetchOptions } = options; // raised default to 8s for mobile networks
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeout);
-  
+
   try {
     const response = await fetch(API_BASE + path, {
       headers: { 'Content-Type': 'application/json' },
@@ -244,13 +136,24 @@ async function apiFetch(path, options = {}) {
       ...fetchOptions,
     });
     clearTimeout(id);
-    const data = await response.json();
+
+    // Safely parse: only call .json() when the server actually returned JSON.
+    // If the server returns an HTML error page, response.json() would crash with
+    // "Unexpected token '<'" — this guard prevents that.
+    const contentType = response.headers.get('content-type') || '';
+    const isJson = contentType.includes('application/json');
+    const data = isJson ? await response.json() : { message: await response.text() };
+
     if (!response.ok) {
       throw new Error(data.message || data.error || `HTTP ${response.status}`);
     }
     return data;
   } catch (err) {
     clearTimeout(id);
+    // Friendly message for timeout/network errors
+    if (err.name === 'AbortError') {
+      throw new Error('Request timed out. Please check your connection and try again.');
+    }
     throw err;
   }
 }
@@ -262,9 +165,10 @@ async function initializeDatabase() {
   console.log('🔄 PeerLink DB: Initializing cache from Express/PostgreSQL backend...');
   try {
     // Attempt to load metadata and resources from server
-    const [courses, skills, users, connections, chats, logs, meetings] = await Promise.all([
+    const [courses, skills, subjects, users, connections, chats, logs, meetings] = await Promise.all([
       apiFetch('/courses'),
       apiFetch('/skills'),
+      apiFetch('/subjects'),
       apiFetch('/users'),
       apiFetch('/connections'),
       apiFetch('/chats'),
@@ -273,8 +177,9 @@ async function initializeDatabase() {
     ]);
 
     // Populate memory cache
-    cache.courses = courses;
-    cache.skills = skills;
+    cache.courses  = courses;
+    cache.skills   = skills;
+    cache.subjects = subjects; // JHS/SHS subjects (new primary)
     cache.users = users.map(u => ({ ...u, password: u.password || 'password123' })); // Add default password for client compatibility
     cache.connections = connections;
     
@@ -345,8 +250,14 @@ async function initializeDatabase() {
 // =============================================
 const db = {
   // --- Synchronous Reads (from Cache) ---
-  getCourses:     () => cache.courses && cache.courses.length > 0 ? cache.courses : DEFAULT_COURSES,
-  getSkills:      () => cache.skills && cache.skills.length > 0 ? cache.skills : DEFAULT_SKILLS,
+  getSubjects:    (level) => {
+    const all = cache.subjects && cache.subjects.length > 0 ? cache.subjects : DEFAULT_SUBJECTS;
+    if (!level) return all;
+    return all.filter(s => !s.level || s.level === level || s.level === 'Both');
+  },
+  // Legacy aliases — kept for backward compatibility
+  getCourses:     () => cache.courses && cache.courses.length > 0 ? cache.courses : DEFAULT_SUBJECTS,
+  getSkills:      () => cache.skills  && cache.skills.length  > 0 ? cache.skills  : DEFAULT_SUBJECTS,
   getUsers:       () => cache.users && cache.users.length > 0 ? cache.users : DEFAULT_USERS,
   getConnections: () => cache.connections,
   getChats:       () => cache.chats,
@@ -428,7 +339,9 @@ const db = {
 
   getOTP: async (email) => {
     if (isOffline) return { success: true, code: '123456' };
-    return await apiFetch(`/auth/get-otp?email=${encodeURIComponent(email)}`);
+    return await apiFetch(`/auth/get-otp?email=${encodeURIComponent(email)}`, {
+      timeout: 10000, // 10s — DB lookup may be slow on mobile/cloud
+    });
   },
   
   // createMeeting: POSTs directly to server, returns meeting with real DB id + created_at
@@ -543,12 +456,22 @@ const db = {
           body: JSON.stringify({
             name: u.name,
             bio: u.bio,
-            program: u.program,
-            yearSection: u.yearSection,
             avatar: u.avatar,
-            courses: u.courses,
-            skills: u.skills,
-            schedule: u.schedule
+            // JHS/SHS fields
+            schoolName: u.schoolName,
+            gradeLevel: u.gradeLevel,
+            section: u.section,
+            track: u.track,
+            strand: u.strand,
+            subjectsNeedHelp: u.subjectsNeedHelp,
+            subjectsCanHelp: u.subjectsCanHelp,
+            studySchedule: u.studySchedule,
+            // Legacy aliases for fallback
+            program: u.schoolName || u.program,
+            yearSection: u.gradeLevel || u.yearSection,
+            courses: u.subjectsNeedHelp || u.courses,
+            skills: u.subjectsCanHelp || u.skills,
+            schedule: u.studySchedule || u.schedule
             // Do NOT pass password here - use db.changePassword instead
           })
         });

@@ -1,60 +1,72 @@
--- PeerLink PostgreSQL Seed Data
--- Only seeds the Admin account, courses, and skills.
+-- PeerLink PostgreSQL Seed Data — JHS/SHS Secondary Education Edition
+-- Seeds the subjects metadata table and the admin account.
 -- Students register themselves through the app.
 
 -- =============================================
--- COURSES
+-- JHS SUBJECTS
 -- =============================================
-INSERT INTO courses (name) VALUES
-  ('Web Development 2 (SPA)'),
-  ('Software Engineering 1'),
-  ('Database Management Systems 2'),
-  ('Information Assurance & Security'),
-  ('Mobile Computing & Android Dev'),
-  ('Technopreneurship & Ethics'),
-  ('Quantitative Methods with Modeling'),
-  ('Discrete Mathematics'),
-  ('Computer Networks & Cisco 2'),
-  ('Data Structures & Algorithms')
+INSERT INTO subjects (name, level) VALUES
+  ('Mathematics',                         'JHS'),
+  ('Science',                             'JHS'),
+  ('English',                             'JHS'),
+  ('Filipino',                            'JHS'),
+  ('Araling Panlipunan',                  'JHS'),
+  ('Technology and Livelihood Education', 'JHS'),
+  ('MAPEH',                               'JHS'),
+  ('Edukasyon sa Pagpapakatao (EsP)',      'JHS')
 ON CONFLICT (name) DO NOTHING;
 
 -- =============================================
--- SKILLS
+-- SHS SUBJECTS
 -- =============================================
-INSERT INTO skills (name) VALUES
-  ('HTML / CSS Styling'),
-  ('JavaScript & Web Tech'),
-  ('React / Frontend Frameworks'),
-  ('Node.js Backend / API Design'),
-  ('SQL & Database Querying'),
-  ('Python & Machine Learning'),
-  ('Git & Collaborative Work'),
-  ('UI/UX Design in Figma'),
-  ('Technical Writing & Thesis Editing'),
-  ('Public Speaking & Presentation'),
-  ('Java & Android Application Dev')
+INSERT INTO subjects (name, level) VALUES
+  ('Oral Communication',                'SHS'),
+  ('Reading and Writing',               'SHS'),
+  ('Komunikasyon at Pananaliksik',       'SHS'),
+  ('General Mathematics',               'SHS'),
+  ('Statistics and Probability',        'SHS'),
+  ('Earth and Life Science',            'SHS'),
+  ('Personal Development',              'SHS'),
+  ('Media and Information Literacy',    'SHS'),
+  ('Pre-Calculus',                      'SHS'),
+  ('Basic Calculus',                    'SHS'),
+  ('General Physics 1',                 'SHS'),
+  ('General Chemistry 1',               'SHS'),
+  ('Empowerment Technologies',          'SHS'),
+  ('Introduction to World Religions',   'SHS'),
+  ('Creative Writing',                  'SHS'),
+  ('21st Century Literature',           'SHS'),
+  ('Contemporary Arts from the Regions','SHS'),
+  ('Physical Education and Health',     'SHS')
 ON CONFLICT (name) DO NOTHING;
 
 -- =============================================
 -- ADMIN USER
 -- Credentials:
---   Username (Student ID field): admin
---   Password:                    PeerLink@Admin2026
+--   Login (email):  admin@peerlink.edu.ph
+--   Password:       PeerLink@Admin2026
 -- Hash below = bcrypt("PeerLink@Admin2026", salt rounds=10)
 -- =============================================
-INSERT INTO users (id, student_id, name, email, password_hash, program, year_section, avatar, bio, courses, skills, schedule, is_admin)
-VALUES (
+INSERT INTO users (
+  id, student_lrn, name, email, password_hash,
+  school_name, education_level, grade_level, section,
+  avatar, bio,
+  subjects_need_help, subjects_can_help, study_schedule,
+  is_admin
+) VALUES (
   'admin',
   'admin',
   'System Administrator',
   'admin@peerlink.edu.ph',
   '$2b$10$4UOjasVIB8XMS.u5dg9vDuj9qkEKf1gi8yRCewiYudGYA7cYB1pPK',
-  'ADMIN',
+  'PeerLink Administration',
+  NULL,
+  NULL,
   'Administration',
   '🛡️',
   'PeerLink System Administrator. Manages users, connections, and platform settings.',
   '[]',
-  '{"have": [], "want": []}',
+  '[]',
   '{}',
   TRUE
 )
@@ -64,5 +76,6 @@ ON CONFLICT (id) DO NOTHING;
 -- INITIAL SYSTEM LOG
 -- =============================================
 INSERT INTO logs (type, message) VALUES
-  ('system', 'PeerLink database initialized. Admin account created.'),
-  ('system', 'Matching engine ready. Waiting for student registrations.');
+  ('system', 'PeerLink JHS/SHS database initialized. Admin account ready.'),
+  ('system', 'Matching engine ready. Waiting for student registrations.')
+ON CONFLICT DO NOTHING;

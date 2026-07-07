@@ -1,5 +1,5 @@
 // ============================================================
-// PEERLINK AI CHAT ASSISTANT — Compact Edition
+// PEERLINK AI CHAT ASSISTANT — JHS/SHS Edition
 // ============================================================
 
 (function () {
@@ -9,70 +9,74 @@
   let initialized = false;
   const TYPING_DELAY_MS = 900;
 
-  // ─── KNOWLEDGE BASE (SHORT ANSWERS) ──────────────────────
+  // ─── KNOWLEDGE BASE (JHS/SHS ANSWERS) ──────────────────────
   const KNOWLEDGE_BASE = [
     {
       id: 'what-is',
       chip: '🔗 What is PeerLink?',
       keywords: ['what is', 'about', 'peerlink', 'system', 'explain', 'overview', 'platform'],
-      answer: `<strong>PeerLink</strong> is a Smart Study Partner Finder for IT/CS students at <strong>PLP</strong>. It matches you with compatible peers based on courses, skills, and schedule using <em>Cosine Similarity</em>. 🎓`
+      answer: `<strong>PeerLink</strong> is an AI-Based Student Collaboration System for Secondary Education. It matches Junior High School (JHS) and Senior High School (SHS) students with study partners based on shared subjects, study schedules, and skills/interests using a <em>Cosine Similarity</em> recommendation engine. 🏫`
     },
     {
       id: 'how-register',
       chip: '📝 How do I sign up?',
       keywords: ['sign up', 'register', 'create account', 'join', 'get started', 'new account'],
-      answer: `Click <strong>"Get Started"</strong> on the landing page and complete the 3-step wizard:<br>
-      1️⃣ Enter your name, Student ID & email<br>
-      2️⃣ Pick your courses & skills<br>
-      3️⃣ Set your weekly schedule<br>
-      Done — you're matched! 🎉`
+      answer: `Click <strong>"Sign Up"</strong> on the top right and complete the onboarding wizard:<br>
+      1️⃣ Enter your Name, 12-digit LRN, School Name, and Grade Level (Grade 7–12)<br>
+      2️⃣ Select the subjects you need help with and subjects you can teach/help others with<br>
+      3️⃣ Mark your free hours on the weekly study schedule grid<br>
+      Done — the system will immediately rank your matching peers! 🎉`
     },
     {
       id: 'how-matching',
       chip: '🎯 How does matching work?',
       keywords: ['match', 'matching', 'algorithm', 'recommend', 'compatible', 'cosine'],
-      answer: `The system scores compatibility across 3 dimensions:<br>
-      📚 <strong>Course Overlap</strong><br>
-      💡 <strong>Skill Exchange</strong> (teach ↔ learn)<br>
-      📅 <strong>Schedule Sync</strong><br>
-      You get a <strong>0–100% score</strong> per match. You can adjust weights in the Matches tab!`
+      answer: `The matching engine calculates compatibility scores across 3 primary areas:<br>
+      📖 <strong>Subject Overlap</strong> (common subjects)<br>
+      💡 <strong>Reciprocal Help</strong> (matching what you want to learn with what others can teach)<br>
+      📅 <strong>Schedule Sync</strong> (overlapping free study hours)<br>
+      You will see a <strong>0–100% match score</strong> next to each student. You can adjust matching weights in the Matches tab!`
     },
     {
       id: 'what-courses',
-      chip: '📚 Available courses?',
-      keywords: ['course', 'subject', 'enrolled', 'syllabus', 'class', 'available course'],
-      answer: `Covers common IT/CS subjects at PLP — Java, Python, Web Dev, Data Structures, OS, Databases, AI/ML, Capstone, and more. Select your enrolled courses during registration. 📖`
+      chip: '📚 Available subjects?',
+      keywords: ['course', 'subject', 'enrolled', 'syllabus', 'class', 'available subjects'],
+      answer: `Covers DepEd secondary education subjects, including Core, Applied, and Specialized subjects like Mathematics, Science, Basic Calculus, General Physics, Creative Writing, Oral Communication, Araling Panlipunan, and MAPEH. 📖`
     },
     {
       id: 'schedule',
       chip: '📅 Can I set my schedule?',
       keywords: ['schedule', 'availability', 'free time', 'time slot', 'calendar', 'available'],
-      answer: `Yes! Go to the <strong>Schedule</strong> tab after login. Click or drag cells on the weekly grid to mark your free hours, then click <strong>"Save Schedule"</strong>. The system only matches you with students who share your free slots. ✅`
+      answer: `Yes! Go to your profile or the **Schedule** tab after logging in. Click or drag slots on the weekly grid to show when you're free, then click **"Save"**. You will only be matched with study partners who share your free hours. ✅`
     },
     {
       id: 'connect-partner',
       chip: '🤝 How to connect?',
       keywords: ['connect', 'invite', 'partner', 'send request', 'study buddy', 'add', 'request'],
-      answer: `Go to <strong>Matches</strong>, browse ranked partners, and click <strong>"Send Invite"</strong>. Once accepted, you can <strong>chat</strong> and <strong>schedule meetings</strong> together. 🔗`
+      answer: `Go to your **Matches** tab, select a study partner, and click **"Send Invite"**. Once they accept your invitation, you can chat, schedule virtual meetings, and call each other. 🔗`
     },
     {
       id: 'programs',
-      chip: '🏫 Supported programs?',
-      keywords: ['program', 'bsit', 'bscs', 'bscpe', 'degree', 'department', 'supported'],
-      answer: `Supports all <strong>College of Computer Studies</strong> students at PLP:<br>
-      🎓 BSIT &nbsp;🎓 BSCS &nbsp;🎓 BSCPE &nbsp;🎓 BSA`
+      chip: '🏫 Strands & Tracks?',
+      keywords: ['program', 'track', 'strand', 'stem', 'abm', 'humss', 'tvl', 'arts', 'sports'],
+      answer: `PeerLink supports all DepEd high school tracks:<br>
+      🎓 **Academic Track** (STEM, ABM, HUMSS, GAS)<br>
+      🎓 **Technical-Vocational-Livelihood (TVL)**<br>
+      🎓 **Arts and Design**<br>
+      🎓 **Sports**<br>
+      JHS matches with JHS, and SHS matches with SHS to keep collaboration peer-focused.`
     },
     {
       id: 'video-call',
       chip: '🎥 Video call?',
       keywords: ['video', 'call', 'meet', 'meeting', 'virtual', 'camera', 'online meeting'],
-      answer: `Schedule a meeting in the <strong>Meetings</strong> tab, then click <strong>"Join Video Call"</strong>. Allow camera & mic access. Chat is built-in — no external app needed! 🚀`
+      answer: `Yes! Schedule a study session in the **Meetings** tab, then click **"Join Video Call"** at the set time. You can video call and text chat in real-time right inside the app! 🚀`
     },
     {
       id: 'who-made',
-      chip: '👨‍💻 Who made PeerLink?',
-      keywords: ['who made', 'developer', 'team', 'created', 'built', 'capstone', 'thesis', 'author'],
-      answer: `BSIT Capstone Project by:<br>
+      chip: '👨‍💻 System Developers?',
+      keywords: ['who made', 'developer', 'team', 'created', 'built', 'thesis', 'author'],
+      answer: `PeerLink was designed and developed as a research thesis project by:<br>
       👨‍💻 Mark Vincent Palsimon<br>
       👨‍💻 John Kris Rivera<br>
       👨‍💻 Francis Carl Eguerra<br>
@@ -82,7 +86,7 @@
       id: 'is-free',
       chip: '💸 Is it free?',
       keywords: ['free', 'cost', 'price', 'pay', 'subscription', 'fee', 'charge', 'money'],
-      answer: `<strong>Yes, completely free!</strong> 🎉 PeerLink is an academic prototype for PLP students. No fees, no subscriptions — just a valid Student ID to register.`
+      answer: `<strong>Yes, completely free!</strong> 🎉 PeerLink is a student collaboration tool. No fees or subscriptions required — just sign up using your 12-digit Learner Reference Number (LRN).`
     }
   ];
 
@@ -192,18 +196,7 @@
     }, TYPING_DELAY_MS);
   }
 
-  function initChat() {
-    if (initialized) return;
-    initialized = true;
-    renderChips();
-    appendMessage(
-      `👋 Hi! I'm the <strong>PeerLink Assistant</strong>. Ask me anything about PeerLink, or tap a quick question below! 😊`,
-      'bot', true
-    );
-  }
-
-  // ─── PUBLIC API ──────────────────────────────────────────
-
+  // Exports
   window.toggleAIChat = function () {
     const panel = document.getElementById('ai-chat-panel');
     const icon  = document.getElementById('ai-chat-toggle-icon');
@@ -212,7 +205,14 @@
       panel.classList.remove('scale-95', 'opacity-0', 'pointer-events-none');
       panel.classList.add('scale-100', 'opacity-100');
       icon.textContent = '✕';
-      initChat();
+      if (!initialized) {
+        initialized = true;
+        renderChips();
+        appendMessage(
+          `👋 Hi! I'm the <strong>PeerLink Assistant</strong>. Ask me anything about PeerLink, or tap a quick question below! 😊`,
+          'bot', true
+        );
+      }
       setTimeout(() => { document.getElementById('ai-chat-input')?.focus(); scrollToBottom(); }, 300);
     } else {
       panel.classList.remove('scale-100', 'opacity-100');

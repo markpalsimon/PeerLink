@@ -228,11 +228,22 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Registration Form temporary state
   let regData = {
     name: "",
-    studentId: "",
+    studentLrn: "",
+    studentId: "", // alias
     email: "",
     password: "",
-    program: "BSIT",
-    yearLevel: "3rd Year",
+    schoolName: "",
+    educationLevel: "",
+    gradeLevel: "",
+    section: "",
+    track: null,
+    strand: null,
+    subjectsNeedHelp: [],
+    subjectsCanHelp: [],
+    studySchedule: {},
+    // Legacy aliases
+    program: "",
+    yearLevel: "",
     courses: [],
     skills: { have: [], want: [] },
     schedule: {} // Day -> [hours]
@@ -327,13 +338,32 @@ document.addEventListener("DOMContentLoaded", async () => {
               if (passwordInput) passwordInput.value = regData.password;
               if (confirmInput) confirmInput.value = regData.password;
             }
-            if (regData.program) {
-              const programSelect = document.getElementById("reg-program");
-              if (programSelect) programSelect.value = regData.program;
+            if (regData.studentLrn) {
+              const lrnInput = document.getElementById('reg-student-lrn');
+              if (lrnInput) lrnInput.value = regData.studentLrn;
             }
-            if (regData.yearLevel) {
-              const yearSelect = document.getElementById("reg-year");
-              if (yearSelect) yearSelect.value = regData.yearLevel;
+            if (regData.educationLevel) {
+              selectEducationLevel(regData.educationLevel);
+            }
+            if (regData.schoolName) {
+              const sn = document.getElementById('reg-school-name');
+              if (sn) sn.value = regData.schoolName;
+            }
+            if (regData.gradeLevel) {
+              const gl = document.getElementById('reg-grade-level');
+              if (gl) gl.value = regData.gradeLevel;
+            }
+            if (regData.section) {
+              const sec = document.getElementById('reg-section');
+              if (sec) sec.value = regData.section;
+            }
+            if (regData.track) {
+              const tr = document.getElementById('reg-track');
+              if (tr) { tr.value = regData.track; updateStrandOptions(); }
+            }
+            if (regData.strand) {
+              const st = document.getElementById('reg-strand');
+              if (st) st.value = regData.strand;
             }
             
             renderRegWizard();
@@ -390,7 +420,15 @@ document.addEventListener("DOMContentLoaded", async () => {
         regData = JSON.parse(savedRegData);
       } else {
         registrationStep = 1;
-        regData = { name: "", studentId: "", email: "", password: "", program: "BSIT", yearLevel: "3rd Year", courses: [], skills: { have: [], want: [] }, schedule: {} };
+        regData = {
+          name: '', studentLrn: '', email: '', password: '',
+          schoolName: '', educationLevel: '', gradeLevel: '', section: '',
+          track: null, strand: null,
+          subjectsNeedHelp: [], subjectsCanHelp: [],
+          studySchedule: {},
+          // legacy aliases used by schedule drag functions
+          schedule: {}
+        };
       }
       renderRegWizard();
     }
@@ -531,7 +569,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     }
     document.getElementById('side-username').textContent = user.name;
-    document.getElementById('side-program').textContent = `${user.yearSection} • ${user.program}`;
+    document.getElementById('side-program').textContent = `${user.gradeLevel || user.yearSection || ''} • ${user.schoolName || user.program || ''}`;
 
     // Toggle navigation panels
     document.getElementById("student-nav").classList.remove("hidden");
@@ -557,7 +595,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     }
     document.getElementById('side-username').textContent = currentUser.name || 'System Administrator';
-    document.getElementById('side-program').textContent = currentUser.yearSection && currentUser.program ? `${currentUser.yearSection} • ${currentUser.program}` : 'System Overseer';
+    document.getElementById('side-program').textContent = (currentUser.gradeLevel || currentUser.yearSection) && (currentUser.schoolName || currentUser.program) 
+      ? `${currentUser.gradeLevel || currentUser.yearSection} • ${currentUser.schoolName || currentUser.program}` 
+      : 'System Overseer';
 
     // Toggle navigation panels
     document.getElementById("student-nav").classList.add("hidden");
@@ -996,7 +1036,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function getSortedRecommendations(user) {
-    const allUsers = db.getUsers().filter(u => u.id !== user.id && !u.isAdmin && u.id !== 'admin' && !u.isBanned);
+    const allUsers = db.getUsers().filter(u => {
+      if (u.id === user.id || u.isAdmin || u.id === 'admin' || u.isBanned) return false;
+      // Segmentation: JHS students match with JHS, SHS students match with SHS
+      if (user.educationLevel && u.educationLevel && u.educationLevel !== user.educationLevel) return false;
+      return true;
+    });
     return allUsers.map(candidate => {
       const match = calculateMatchDetails(user, candidate);
       return {
@@ -1048,34 +1093,36 @@ document.addEventListener("DOMContentLoaded", async () => {
       nextBtn.textContent = "Next Step";
     }
 
-    // Populate data grids on Step 2
+    // Populate subject grids on Step 2 — filtered by education level
     if (registrationStep === 2) {
-      const courses = db.getCourses() || [];
-      const skills = db.getSkills() || [];
+      const level    = regData.educationLevel || '';
+      const allSubjects = db.getSubjects ? db.getSubjects(level || undefined) : db.getCourses();
+      // Normalise: getSubjects may return objects {name, level} or plain strings
+      const subjectNames = allSubjects.map(s => typeof s === 'string' ? s : s.name);
 
-      // Render courses
-      document.getElementById("reg-courses-grid").innerHTML = courses.map(c => `
-        <label class="tag-checkbox flex items-center gap-2 border border-slate-200 p-2.5 rounded-lg text-xs font-medium cursor-pointer bg-white hover:bg-slate-50 select-none" id="lbl-rc-${c.replace(/\s+/g, '')}">
-          <input type="checkbox" class="sr-only" value="${c}" onchange="toggleRegTag(this, 'lbl-rc-${c.replace(/\s+/g, '')}')">
-          <span>${c}</span>
-        </label>
-      `).join('');
-
-      // Render offered skills
-      document.getElementById("reg-have-skills-grid").innerHTML = skills.map(s => `
-        <label class="tag-checkbox flex items-center gap-2 border border-slate-200 p-2.5 rounded-lg text-xs font-medium cursor-pointer bg-white hover:bg-slate-50 select-none" id="lbl-rh-${s.replace(/\s+/g, '')}">
-          <input type="checkbox" class="sr-only" value="${s}" onchange="toggleRegTag(this, 'lbl-rh-${s.replace(/\s+/g, '')}')">
+      const makeTag = (s, prefix) => `
+        <label class="tag-checkbox flex items-center gap-2 border border-slate-200 p-2.5 rounded-lg text-xs font-medium cursor-pointer bg-white hover:bg-slate-50 select-none" id="lbl-${prefix}-${s.replace(/[^a-z0-9]/gi, '')}">
+          <input type="checkbox" class="sr-only" value="${s}" onchange="toggleRegTag(this, 'lbl-${prefix}-${s.replace(/[^a-z0-9]/gi, '')}')">
           <span>${s}</span>
         </label>
-      `).join('');
+      `;
 
-      // Render desired skills
-      document.getElementById("reg-want-skills-grid").innerHTML = skills.map(s => `
-        <label class="tag-checkbox flex items-center gap-2 border border-slate-200 p-2.5 rounded-lg text-xs font-medium cursor-pointer bg-white hover:bg-slate-50 select-none" id="lbl-rw-${s.replace(/\s+/g, '')}">
-          <input type="checkbox" class="sr-only" value="${s}" onchange="toggleRegTag(this, 'lbl-rw-${s.replace(/\s+/g, '')}')">
-          <span>${s}</span>
-        </label>
-      `).join('');
+      document.getElementById('reg-courses-grid').innerHTML =
+        subjectNames.map(s => makeTag(s, 'rc')).join('');
+      document.getElementById('reg-have-skills-grid').innerHTML =
+        subjectNames.map(s => makeTag(s, 'rh')).join('');
+      document.getElementById('reg-want-skills-grid').innerHTML =
+        subjectNames.map(s => makeTag(s, 'rw')).join('');
+
+      // Restore previously selected values
+      (regData.subjectsNeedHelp || []).forEach(v => {
+        const el = document.querySelector(`#reg-courses-grid input[value="${v}"]`);
+        if (el) { el.checked = true; toggleRegTag(el, el.closest('label').id); }
+      });
+      (regData.subjectsCanHelp || []).forEach(v => {
+        const el = document.querySelector(`#reg-have-skills-grid input[value="${v}"]`);
+        if (el) { el.checked = true; toggleRegTag(el, el.closest('label').id); }
+      });
     }
 
     // Render scheduler grid on Step 3
@@ -1091,6 +1138,75 @@ document.addEventListener("DOMContentLoaded", async () => {
     } else {
       lbl.className = "tag-checkbox flex items-center gap-2 border border-slate-200 p-2.5 rounded-lg text-xs font-medium cursor-pointer bg-white hover:bg-slate-50 select-none";
     }
+  };
+
+  // ── JHS/SHS Registration Helpers ───────────────────────────────────────────
+
+  window.selectEducationLevel = function(level) {
+    // Store value
+    const hidden = document.getElementById('reg-education-level');
+    if (hidden) hidden.value = level;
+
+    // Highlight the chosen button
+    const jhsBtn = document.getElementById('reg-level-jhs');
+    const shsBtn = document.getElementById('reg-level-shs');
+    const activeClass  = 'flex-1 py-2.5 rounded-lg border-2 border-brand-purple text-sm font-bold text-brand-purple bg-indigo-50 transition-all';
+    const defaultClass = 'flex-1 py-2.5 rounded-lg border-2 border-slate-200 text-sm font-bold text-slate-500 hover:border-brand-purple hover:text-brand-purple transition-all';
+    if (jhsBtn) jhsBtn.className = level === 'JHS' ? activeClass : defaultClass;
+    if (shsBtn) shsBtn.className = level === 'SHS' ? activeClass : defaultClass;
+
+    // Show/hide Track & Strand for SHS
+    const trackGroup  = document.getElementById('reg-track-group');
+    const strandGroup = document.getElementById('reg-strand-group');
+    if (trackGroup)  trackGroup.classList.toggle('hidden',  level !== 'SHS');
+    if (strandGroup) strandGroup.classList.toggle('hidden', level !== 'SHS');
+
+    // Make track/strand required only for SHS
+    const trackSel  = document.getElementById('reg-track');
+    const strandSel = document.getElementById('reg-strand');
+    if (trackSel)  trackSel.required  = level === 'SHS';
+    if (strandSel) strandSel.required = level === 'SHS';
+
+    // Filter grade options: show only JHS grades (7-10) or SHS grades (11-12)
+    document.querySelectorAll('#reg-grade-level .jhs-option').forEach(o => {
+      o.hidden = level === 'SHS';
+    });
+    document.querySelectorAll('#reg-grade-level .shs-option').forEach(o => {
+      o.hidden = level === 'JHS';
+    });
+    const gradeSelect = document.getElementById('reg-grade-level');
+    if (gradeSelect) gradeSelect.value = '';
+
+    // Populate school datalist from existing school names in user cache
+    const datalist = document.getElementById('reg-school-datalist');
+    if (datalist) {
+      const schools = [...new Set(
+        (db.getUsers() || [])
+          .map(u => u.schoolName || u.program || '')
+          .filter(s => s && s !== 'PeerLink Administration' && s !== 'ADMIN')
+      )];
+      datalist.innerHTML = schools.map(s => `<option value="${s}">`).join('');
+    }
+  };
+
+  window.updateStrandOptions = function() {
+    const track     = document.getElementById('reg-track')?.value || '';
+    const strandSel = document.getElementById('reg-strand');
+    if (!strandSel) return;
+
+    const strandMap = {
+      'Academic':                       ['STEM', 'ABM', 'HUMSS', 'GAS'],
+      'Technical-Vocational-Livelihood': ['ICT', 'HE', 'IA', 'CSS', 'Cookery', 'Electronics'],
+      'Sports':                         ['Sports Track'],
+      'Arts and Design':                ['Arts and Design Track'],
+    };
+
+    const options = strandMap[track] || [];
+    strandSel.innerHTML = '<option value="" disabled selected>Select strand...</option>' +
+      options.map(s => `<option value="${s}">${s}</option>`).join('');
+
+    const strandGroup = document.getElementById('reg-strand-group');
+    if (strandGroup) strandGroup.classList.toggle('hidden', options.length === 0);
   };
 
   // Schedule drag availability selector
@@ -1171,61 +1287,82 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   window.regNext = function() {
     if (registrationStep === 1) {
-      // Validate step 1
-      const name = document.getElementById("reg-name").value.trim();
-      const studentId = document.getElementById("reg-student-id").value.trim();
-      const email = document.getElementById("reg-email").value.trim();
-      const pw = document.getElementById("reg-password").value;
-      const pwc = document.getElementById("reg-password-confirm").value;
+      // ── Step 1 validation ──────────────────────────────────────────
+      const educationLevel = document.getElementById('reg-education-level').value.trim();
+      const name           = document.getElementById('reg-name').value.trim();
+      const studentLrn     = document.getElementById('reg-student-lrn').value.trim();
+      const schoolName     = document.getElementById('reg-school-name').value.trim();
+      const gradeLevel     = document.getElementById('reg-grade-level').value.trim();
+      const section        = document.getElementById('reg-section').value.trim();
+      const email          = document.getElementById('reg-email').value.trim();
+      const pw             = document.getElementById('reg-password').value;
+      const pwc            = document.getElementById('reg-password-confirm').value;
+      const track          = document.getElementById('reg-track')?.value.trim() || '';
+      const strand         = document.getElementById('reg-strand')?.value.trim() || '';
 
-      if (!name || !studentId || !email || !pw) {
-        showToast('Please fill up all required fields.', 'warning');
-        return;
+      if (!educationLevel) { showToast('Please select your Education Level (JHS or SHS).', 'warning'); return; }
+      if (!name)           { showToast('Please enter your Full Name.', 'warning'); return; }
+      if (!/^\d{12}$/.test(studentLrn)) {
+        showToast('Student LRN must be exactly 12 numeric digits.', 'error'); return;
       }
-      if (pw !== pwc) {
-        showToast('Passwords do not match.', 'error');
-        return;
+      if (!schoolName)  { showToast('Please enter your School Name.', 'warning'); return; }
+      if (!gradeLevel)  { showToast('Please select your Grade Level.', 'warning'); return; }
+      if (!section)     { showToast('Please enter your Section.', 'warning'); return; }
+      if (educationLevel === 'SHS') {
+        if (!track)  { showToast('SHS students must select a Track.', 'warning'); return; }
+        if (!strand) { showToast('SHS students must select a Strand.', 'warning'); return; }
       }
+      if (!email) { showToast('Please enter your Email Address.', 'warning'); return; }
+      if (!pw)    { showToast('Please set a Password.', 'warning'); return; }
+      if (pw !== pwc) { showToast('Passwords do not match.', 'error'); return; }
 
-      regData.name = name;
-      regData.studentId = studentId.toLowerCase();
-      regData.email = email.toLowerCase();
-      regData.password = pw;
-      regData.program = document.getElementById("reg-program").value;
-      regData.yearLevel = document.getElementById("reg-year").value;
+      regData.educationLevel = educationLevel;
+      regData.name           = name;
+      regData.studentLrn     = studentLrn;
+      regData.schoolName     = schoolName;
+      regData.gradeLevel     = gradeLevel;
+      regData.section        = section;
+      regData.track          = educationLevel === 'SHS' ? track  : null;
+      regData.strand         = educationLevel === 'SHS' ? strand : null;
+      regData.email          = email.toLowerCase();
+      regData.password       = pw;
+
+      // Legacy aliases so downstream code keeps working
+      regData.studentId  = studentLrn;
+      regData.program    = schoolName;
+      regData.yearLevel  = gradeLevel;
 
       registrationStep = 2;
       saveRegProgress();
       renderRegWizard();
+
     } else if (registrationStep === 2) {
-      // Collect selected courses
-      const courses = [];
-      document.querySelectorAll("#reg-courses-grid input:checked").forEach(cb => {
-        courses.push(cb.value);
+      // ── Step 2: collect subject selections ────────────────────────
+      const subjectsNeedHelp = [];
+      document.querySelectorAll('#reg-courses-grid input:checked').forEach(cb => {
+        subjectsNeedHelp.push(cb.value);
       });
 
-      const haveSkills = [];
-      document.querySelectorAll("#reg-have-skills-grid input:checked").forEach(cb => {
-        haveSkills.push(cb.value);
+      const subjectsCanHelp = [];
+      document.querySelectorAll('#reg-have-skills-grid input:checked').forEach(cb => {
+        subjectsCanHelp.push(cb.value);
       });
 
-      const wantSkills = [];
-      document.querySelectorAll("#reg-want-skills-grid input:checked").forEach(cb => {
-        wantSkills.push(cb.value);
-      });
-
-      if (courses.length === 0) {
-        showToast('Please select at least one course.', 'warning');
+      if (subjectsNeedHelp.length === 0 && subjectsCanHelp.length === 0) {
+        showToast('Please select at least one subject you need help with or can help others with.', 'warning');
         return;
       }
 
-      regData.courses = courses;
-      regData.skills.have = haveSkills;
-      regData.skills.want = wantSkills;
+      regData.subjectsNeedHelp = subjectsNeedHelp;
+      regData.subjectsCanHelp  = subjectsCanHelp;
+      // Legacy aliases
+      regData.courses      = subjectsNeedHelp;
+      regData.skills       = { have: subjectsCanHelp, want: subjectsNeedHelp };
 
       registrationStep = 3;
       saveRegProgress();
       renderRegWizard();
+
     } else if (registrationStep === 3) {
       // Send Verification Code to email
       sendRegistrationOTP();
@@ -1240,6 +1377,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   async function sendRegistrationOTP() {
     try {
       showToast('Sending verification code to your email... 📧', 'info');
+      // Sync schedule alias before sending
+      regData.studySchedule = regData.schedule || {};
       const res = await db.registerSendOTP(regData);
       if (res && res.success) {
         showToast('Verification code sent!', 'success');
@@ -1310,14 +1449,18 @@ document.addEventListener("DOMContentLoaded", async () => {
       const res = await db.registerVerifyOTP(regData.email, code);
       if (res && res.success && res.user) {
         if (regOtpTimerInterval) clearInterval(regOtpTimerInterval);
-        
+
         // Clear saved registration states since it is completed
         localStorage.removeItem("peerlink_registration_step");
         localStorage.removeItem("peerlink_registration_data");
 
-        // Update caches and localStorage
-        const freshUsers = await apiFetch('/users');
-        db.updateCacheData(freshUsers, db.getConnections(), db.getMeetings());
+        // Refresh user cache — non-fatal: login proceeds even if this fails
+        try {
+          const freshUsers = await apiFetch('/users');
+          db.updateCacheData(freshUsers, db.getConnections(), db.getMeetings());
+        } catch (cacheErr) {
+          console.warn('Could not refresh user cache after registration (non-fatal):', cacheErr.message);
+        }
 
         loginAsUser(res.user);
         showToast('🎉 Email verified! Welcome to PeerLink!', 'success', 5000);
@@ -1328,6 +1471,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       showToast(err.message || 'Incorrect or expired verification code.', 'error');
     }
   }
+
 
   function saveRegProgress() {
     localStorage.setItem("peerlink_registration_step", registrationStep);
@@ -1348,17 +1492,27 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const newUser = {
       id: "student_" + Date.now(),
-      studentId: regData.studentId,
+      studentLrn: regData.studentLrn,
+      studentId: regData.studentLrn,
       name: regData.name,
       email: regData.email,
       password: regData.password,
-      program: regData.program,
-      yearSection: `${regData.program} ${regData.yearLevel.slice(0, 1)}A`, // Mock section e.g. BSIT 3A
+      schoolName: regData.schoolName,
+      program: regData.schoolName,
+      educationLevel: regData.educationLevel,
+      gradeLevel: regData.gradeLevel,
+      section: regData.section,
+      track: regData.track,
+      strand: regData.strand,
+      yearSection: regData.gradeLevel,
       avatar: randomAvatar,
-      bio: `I am a ${regData.yearLevel} ${regData.program} student looking for a study buddy. Let's learn together!`,
-      courses: regData.courses,
-      skills: regData.skills,
-      schedule: regData.schedule,
+      bio: `I am a ${regData.gradeLevel} student from ${regData.schoolName} looking for a study buddy. Let's learn together!`,
+      subjectsNeedHelp: regData.subjectsNeedHelp,
+      subjectsCanHelp: regData.subjectsCanHelp,
+      courses: regData.subjectsNeedHelp,
+      skills: regData.subjectsCanHelp,
+      studySchedule: regData.studySchedule,
+      schedule: regData.studySchedule,
       profile_completion: 85
     };
 
@@ -1627,7 +1781,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                   <div class="bg-slate-50 hover:bg-slate-100/80 border rounded-xl p-4 text-center cursor-pointer transition-all" onclick="openPartnerProfile('${r.candidate.id}')">
                     <div class="w-12 h-12 rounded-full bg-slate-100 border-2 border-indigo-100 flex items-center justify-center text-3xl overflow-hidden mb-2 mx-auto">${renderAvatar(r.candidate.avatar, 'text-3xl', 'w-full h-full object-cover rounded-full')}</div>
                     <h4 class="font-semibold text-slate-800 text-xs truncate">${r.candidate.name}</h4>
-                    <p class="text-[10px] text-slate-400 truncate">${r.candidate.yearSection}</p>
+                    <p class="text-[10px] text-slate-400 truncate">${r.candidate.gradeLevel || r.candidate.yearSection || ''} • ${r.candidate.schoolName || r.candidate.program || ''}</p>
                     <span class="inline-block bg-indigo-50 border border-indigo-100 text-brand-purple text-[10px] font-bold px-2 py-0.5 rounded-full mt-2">${r.match.total}% Match</span>
                   </div>
                 `).join('')}
@@ -1894,7 +2048,7 @@ document.addEventListener("DOMContentLoaded", async () => {
               </div>
               <div>
                 <h4 class="font-bold text-slate-800">${p.name}</h4>
-                <p class="text-xs text-slate-400">${p.yearSection}</p>
+                <p class="text-xs text-slate-400 truncate max-w-[200px]">${p.gradeLevel || p.yearSection || ''} • ${p.schoolName || p.program || ''}</p>
               </div>
             </div>
           </td>
@@ -1973,13 +2127,13 @@ document.addEventListener("DOMContentLoaded", async () => {
           <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div class="space-y-2">
               <div class="flex justify-between text-xs font-bold text-slate-700">
-                <span>📖 Course Overlap Weight</span>
+                <span>📖 Subject Overlap Weight</span>
                 <span class="text-brand-purple" id="lbl-weight-course">${matchWeights.course}%</span>
               </div>
               <input type="range" id="slider-weight-course" min="0" max="100" value="${matchWeights.course}" 
                      class="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-indigo-600"
                      oninput="adjustWeights('course', this.value)">
-              <div class="text-[10px] text-slate-400 font-medium">Matches overlapping enrollments in same section.</div>
+              <div class="text-[10px] text-slate-400 font-medium">Matches overlapping subjects between students.</div>
             </div>
 
             <div class="space-y-2">
@@ -2012,9 +2166,9 @@ document.addEventListener("DOMContentLoaded", async () => {
             </summary>
             <div class="mt-4 p-4 bg-slate-50 rounded-xl border space-y-4 font-mono text-[11px] text-slate-600 font-medium">
               <div>
-                <p class="font-bold text-slate-800 text-xs font-sans mb-1">1. Course Overlap Cosine Similarity:</p>
+                <p class="font-bold text-slate-800 text-xs font-sans mb-1">1. Subject Overlap Cosine Similarity:</p>
                 <div class="bg-white p-2.5 rounded border border-slate-200 shadow-sm inline-block select-all font-mono">
-                  Similarity(A, B) = |A_courses ∩ B_courses| / √( |A_courses| * |B_courses| )
+                  Similarity(A, B) = |A_subjects ∩ B_subjects| / √( |A_subjects| * |B_subjects| )
                 </div>
               </div>
               <div>
@@ -2069,7 +2223,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 <tr>
                   <th class="p-4 pl-6">Student Partner</th>
                   <th class="p-4">Match Score</th>
-                  <th class="p-4">Shared Courses</th>
+                  <th class="p-4">Shared Subjects</th>
                   <th class="p-4">Shared Skills</th>
                   <th class="p-4">Common Availability</th>
                   <th class="p-4 pr-6 text-right">Actions</th>
@@ -2127,7 +2281,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           messages: [{
             senderId: partnerId,
             senderName: target ? target.name : 'Study Partner',
-            text: `Hi! Let's arrange a time to study our common courses!`,
+            text: `Hi! Let's arrange a time to study our common subjects!`,
             time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
           }]
         });
@@ -2229,7 +2383,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Shared Courses
     const sharedCoursesHTML = match.sharedCourses.length > 0 
       ? match.sharedCourses.map(c => `<span class="inline-flex items-center gap-1.5 bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-bold px-3 py-1.5 rounded-xl"><span class="w-1.5 h-1.5 bg-indigo-500 rounded-full"></span>${c}</span>`).join('')
-      : `<span class="text-xs text-slate-400">No courses in common.</span>`;
+      : `<span class="text-xs text-slate-400">No subjects in common.</span>`;
 
     // Partner other courses
     const otherCourses = partner.courses.filter(c => !match.sharedCourses.includes(c));
@@ -2280,9 +2434,10 @@ document.addEventListener("DOMContentLoaded", async () => {
           <div class="text-4xl w-16 h-16 rounded-full bg-white border flex items-center justify-center shadow-inner shrink-0 overflow-hidden">${renderAvatar(partner.avatar, 'text-4xl', 'w-full h-full object-cover rounded-full')}</div>
           <div class="space-y-1 pr-6">
             <h3 class="font-heading font-extrabold text-2xl text-slate-800">${partner.name}</h3>
-            <p class="text-sm font-semibold text-indigo-600 flex items-center gap-1">
+            <p class="text-sm font-semibold text-indigo-600 flex flex-wrap items-center gap-1.5">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
-              ${partner.yearSection}
+              <span>${partner.gradeLevel || partner.yearSection || ''} ${partner.section ? `(${partner.section})` : ''} • ${partner.schoolName || partner.program || ''}</span>
+              ${partner.track && partner.strand ? `<span class="bg-indigo-100 text-indigo-800 text-[10px] font-bold px-2 py-0.5 rounded-full">${partner.track} (${partner.strand})</span>` : ''}
             </p>
           </div>
         </div>
@@ -2301,7 +2456,7 @@ document.addEventListener("DOMContentLoaded", async () => {
               <!-- Course Similarity Bar -->
               <div>
                 <div class="flex justify-between text-xs font-semibold text-slate-600 mb-1">
-                  <span>Course Similarity</span>
+                  <span>Subject Similarity</span>
                   <span>${match.coursePercent}%</span>
                 </div>
                 <div class="w-full bg-slate-200/70 h-2 rounded-full overflow-hidden">
@@ -2343,7 +2498,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
           <!-- Courses -->
           <div class="space-y-2">
-            <h4 class="text-xs uppercase font-extrabold tracking-wider text-slate-400">Courses in Progress</h4>
+            <h4 class="text-xs uppercase font-extrabold tracking-wider text-slate-400">Subjects of Focus</h4>
             <div class="flex flex-wrap gap-2">
               ${sharedCoursesHTML}
               ${otherCoursesHTML}
@@ -2596,8 +2751,8 @@ document.addEventListener("DOMContentLoaded", async () => {
             </div>
             
             <div>
-              <label class="block text-xs font-bold text-slate-600 mb-1.5 uppercase">Select Course/Topic</label>
-              <input type="text" id="meet-topic" class="w-full border rounded-lg px-3 py-2 text-xs focus:outline-none" placeholder="Database Systems 2" required>
+              <label class="block text-xs font-bold text-slate-600 mb-1.5 uppercase">Select Subject/Topic</label>
+              <input type="text" id="meet-topic" class="w-full border rounded-lg px-3 py-2 text-xs focus:outline-none" placeholder="Mathematics" required>
             </div>
 
             <div class="grid grid-cols-2 gap-3">
@@ -2951,7 +3106,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 <!-- Name & Status -->
                 <div>
                   <h4 class="font-heading font-extrabold text-2xl text-white tracking-wide">${partner ? partner.name : 'Study Partner'}</h4>
-                  <p class="text-sm text-slate-400 mt-0.5">${partner ? partner.yearSection : ''}</p>
+                  <p class="text-sm text-slate-400 mt-0.5">${partner ? (partner.gradeLevel || partner.yearSection || '') + ' • ' + (partner.schoolName || partner.program || '') : ''}</p>
                 </div>
                 <!-- Status pill -->
                 <div class="bg-emerald-500/10 border border-emerald-500/30 px-5 py-1.5 rounded-full text-xs font-mono tracking-widest text-emerald-400 font-semibold">
@@ -3809,10 +3964,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
 
       // 1. Update Active Partner Header Name and details
-      const headerName = document.getElementById("chat-header-partner-name");
-      const headerSection = document.getElementById("chat-header-partner-section");
       if (headerName) headerName.textContent = activePartnerObj ? activePartnerObj.name : 'Select a conversation';
-      if (headerSection) headerSection.textContent = activePartnerObj ? activePartnerObj.yearSection : '';
+      if (headerSection) headerSection.textContent = activePartnerObj ? `${activePartnerObj.gradeLevel || activePartnerObj.yearSection || ''} • ${activePartnerObj.schoolName || activePartnerObj.program || ''}` : '';
 
       // 4. Update Left Sidebar Room List last-texts
       partners.forEach(p => {
@@ -3943,7 +4096,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                <div class="min-w-0">
                  <h4 class="font-bold text-sm text-slate-800 truncate" id="chat-header-partner-name">${activePartnerObj ? activePartnerObj.name : 'Select a conversation'}</h4>
                  <div class="flex items-center gap-1.5">
-                   <span id="chat-header-online-status" class="${activeChatCollabId && (window.onlineUserIds||new Set()).has(String(activeChatCollabId)) ? 'text-[10px] text-emerald-500 font-semibold' : 'text-[10px] text-slate-400'}">${activeChatCollabId ? ((window.onlineUserIds||new Set()).has(String(activeChatCollabId)) ? '● Online' : '● Offline') : (activePartnerObj ? activePartnerObj.yearSection : '')}</span>
+                   <span id="chat-header-online-status" class="${activeChatCollabId && (window.onlineUserIds||new Set()).has(String(activeChatCollabId)) ? 'text-[10px] text-emerald-500 font-semibold' : 'text-[10px] text-slate-400'}">${activeChatCollabId ? ((window.onlineUserIds||new Set()).has(String(activeChatCollabId)) ? '● Online' : '● Offline') : (activePartnerObj ? `${activePartnerObj.gradeLevel || activePartnerObj.yearSection || ''} • ${activePartnerObj.schoolName || activePartnerObj.program || ''}` : '')}</span>
                  </div>
                </div>
              </div>
@@ -4283,6 +4436,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     const meetings = db.getMeetings() || [];
     const logs = db.getLogs() || [];
 
+    const jhsUsers = users.filter(u => !u.isAdmin && u.educationLevel === 'JHS').length;
+    const shsUsers = users.filter(u => !u.isAdmin && u.educationLevel === 'SHS').length;
+
     // SVG graph parameters (representing registrations over time)
     // Draw an SVG path based on mock registration trends
     const dataPoints = [25, 45, 30, 65, 80, 55, 95];
@@ -4306,6 +4462,10 @@ document.addEventListener("DOMContentLoaded", async () => {
             <span class="text-2xl">👥</span>
             <div class="text-2xl font-bold text-slate-800 mt-2">${users.filter(u => !u.isAdmin).length}</div>
             <div class="text-[10px] text-slate-400 uppercase tracking-wide">Total Students</div>
+            <div class="mt-2.5 flex flex-wrap gap-1.5 text-[9px] font-bold">
+              <span class="bg-indigo-50 border border-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded">🏫 JHS: ${jhsUsers}</span>
+              <span class="bg-indigo-50 border border-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded">🎓 SHS: ${shsUsers}</span>
+            </div>
           </div>
           <div class="bg-white border rounded-2xl p-5 shadow-sm">
             <span class="text-2xl">🤝</span>
@@ -4356,7 +4516,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                       <td class="p-3">${onlineDot}</td>
                       <td class="p-3 text-slate-500">${u.studentId || 'N/A'}</td>
                       <td class="p-3 text-slate-500">${u.email}</td>
-                      <td class="p-3 text-slate-500">${u.yearSection || 'N/A'}</td>
+                      <td class="p-3 text-slate-500 truncate max-w-[200px]">${u.gradeLevel || u.yearSection || 'N/A'} ${u.section ? `(${u.section})` : ''} • ${u.schoolName || u.program || 'N/A'}</td>
                       <td class="p-3 pr-4 text-right">
                         <div class="inline-flex gap-1 flex-wrap justify-end">
                           ${u.isBanned
@@ -4573,6 +4733,22 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
   window.renderAvatar = renderAvatar;
 
+  window.updateProfileStrandOptions = function(selectedStrand) {
+    const track = document.getElementById('prof-track')?.value || '';
+    const strandSel = document.getElementById('prof-strand');
+    if (!strandSel) return;
+
+    const strandMap = {
+      'Academic':                       ['STEM', 'ABM', 'HUMSS', 'GAS'],
+      'Technical-Vocational-Livelihood': ['ICT', 'HE', 'IA', 'CSS', 'Cookery', 'Electronics'],
+      'Sports':                         ['Sports Track'],
+      'Arts and Design':                ['Arts and Design Track'],
+    };
+
+    const options = strandMap[track] || [];
+    strandSel.innerHTML = options.map(s => `<option value="${s}" ${s === selectedStrand ? 'selected' : ''}>${s}</option>`).join('');
+  };
+
   function renderProfilePane() {
     const avatarOptions = ['👤','🧑','👦','👧','🧑‍💻','👨‍💻','👩‍💻','🧑‍🎓','👨‍🎓','👩‍🎓','🦊','🐻','🐼','🦁','🐯','🐨','🐸','🦄'];
     const isPhoto = currentUser.avatar && currentUser.avatar.startsWith('data:image');
@@ -4618,9 +4794,51 @@ document.addEventListener("DOMContentLoaded", async () => {
               <input type="text" id="prof-name" class="w-full border rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-300" value="${currentUser.name || ''}">
             </div>
             <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase">Section / Section Group</label>
-              <input type="text" id="prof-section" class="w-full border rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-300" value="${currentUser.yearSection || ''}">
+              <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase">Education Level</label>
+              <span class="block px-3 py-2 text-xs font-bold bg-slate-100 rounded-lg text-slate-700 select-none">
+                ${currentUser.educationLevel === 'JHS' ? '🏫 Junior High School' : (currentUser.educationLevel === 'SHS' ? '🎓 Senior High School' : '🛡️ Admin')}
+              </span>
             </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase">School Name</label>
+              <input type="text" id="prof-school-name" list="prof-school-datalist" class="w-full border rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-300" value="${currentUser.schoolName || ''}">
+              <datalist id="prof-school-datalist"></datalist>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase">Grade Level</label>
+              <select id="prof-grade-level" class="w-full border rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                ${currentUser.educationLevel === 'JHS' ? `
+                  <option value="Grade 7" ${currentUser.gradeLevel === 'Grade 7' ? 'selected' : ''}>Grade 7</option>
+                  <option value="Grade 8" ${currentUser.gradeLevel === 'Grade 8' ? 'selected' : ''}>Grade 8</option>
+                  <option value="Grade 9" ${currentUser.gradeLevel === 'Grade 9' ? 'selected' : ''}>Grade 9</option>
+                  <option value="Grade 10" ${currentUser.gradeLevel === 'Grade 10' ? 'selected' : ''}>Grade 10</option>
+                ` : `
+                  <option value="Grade 11" ${currentUser.gradeLevel === 'Grade 11' ? 'selected' : ''}>Grade 11</option>
+                  <option value="Grade 12" ${currentUser.gradeLevel === 'Grade 12' ? 'selected' : ''}>Grade 12</option>
+                `}
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase">Section</label>
+              <input type="text" id="prof-section" class="w-full border rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-300" value="${currentUser.section || ''}">
+            </div>
+            ${currentUser.educationLevel === 'SHS' ? `
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase">Track</label>
+                <select id="prof-track" onchange="updateProfileStrandOptions()" class="w-full border rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                  <option value="Academic" ${currentUser.track === 'Academic' ? 'selected' : ''}>Academic</option>
+                  <option value="Technical-Vocational-Livelihood" ${currentUser.track === 'Technical-Vocational-Livelihood' ? 'selected' : ''}>Technical-Vocational-Livelihood (TVL)</option>
+                  <option value="Sports" ${currentUser.track === 'Sports' ? 'selected' : ''}>Sports</option>
+                  <option value="Arts and Design" ${currentUser.track === 'Arts and Design' ? 'selected' : ''}>Arts and Design</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase">Strand</label>
+                <select id="prof-strand" class="w-full border rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                  <!-- dynamically populated -->
+                </select>
+              </div>
+            ` : ''}
             <div>
               <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase">Birthday</label>
               <input type="date" id="prof-birthday" class="w-full border rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-300" value="${currentUser.birthday || ''}">
@@ -4648,6 +4866,21 @@ document.addEventListener("DOMContentLoaded", async () => {
         </div>
       </div>
     `;
+
+    setTimeout(() => {
+      const datalist = document.getElementById('prof-school-datalist');
+      if (datalist) {
+        const schools = [...new Set(
+          (db.getUsers() || [])
+            .map(u => u.schoolName || u.program || '')
+            .filter(s => s && s !== 'PeerLink Administration' && s !== 'ADMIN')
+        )];
+        datalist.innerHTML = schools.map(s => `<option value="${s}">`).join('');
+      }
+      if (currentUser.educationLevel === 'SHS') {
+        updateProfileStrandOptions(currentUser.strand);
+      }
+    }, 0);
   }
 
   window.selectProfileAvatar = function(avatar) {
@@ -4689,7 +4922,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     const index = users.findIndex(u => u.id === currentUser.id);
     if (index !== -1) {
       currentUser.name        = (document.getElementById('prof-name')?.value || currentUser.name).trim();
-      currentUser.yearSection = (document.getElementById('prof-section')?.value || currentUser.yearSection).trim();
+      currentUser.schoolName  = (document.getElementById('prof-school-name')?.value || currentUser.schoolName || '').trim();
+      currentUser.gradeLevel  = document.getElementById('prof-grade-level')?.value || currentUser.gradeLevel || '';
+      currentUser.section     = (document.getElementById('prof-section')?.value || currentUser.section || '').trim();
+      currentUser.track       = document.getElementById('prof-track')?.value || currentUser.track || null;
+      currentUser.strand      = document.getElementById('prof-strand')?.value || currentUser.strand || null;
+
+      // Legacy compatibility mapping
+      currentUser.program     = currentUser.schoolName;
+      currentUser.yearSection = currentUser.gradeLevel;
+
       currentUser.bio         = (document.getElementById('prof-bio')?.value || '').trim();
       currentUser.birthday    = document.getElementById('prof-birthday')?.value || currentUser.birthday || '';
       currentUser.address     = (document.getElementById('prof-address')?.value || '').trim();
@@ -4730,7 +4972,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
       }
       document.getElementById('side-username').textContent  = currentUser.name;
-      document.getElementById('side-program').textContent   = `${currentUser.yearSection} • ${currentUser.program}`;
+      document.getElementById('side-program').textContent   = `${currentUser.gradeLevel || currentUser.yearSection || ''} • ${currentUser.schoolName || currentUser.program || ''}`;
       
       db.addLog('user', `${currentUser.name} updated profile details.`);
       showToast('Profile updated successfully! ✨', 'success');
@@ -4868,7 +5110,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           <div class="divide-y divide-slate-100">
             ${acceptedHTML || ''}
             <div class="py-3 flex justify-between items-center text-xs">
-              <p class="text-slate-700">👋 Welcome to PeerLink! Fill out your course list and weekly schedule details to start matching.</p>
+              <p class="text-slate-700">👋 Welcome to PeerLink! Fill out your subject list and weekly schedule details to start matching.</p>
               <span class="text-slate-400 shrink-0 ml-4">Welcome</span>
             </div>
           </div>
@@ -4931,8 +5173,8 @@ document.addEventListener("DOMContentLoaded", async () => {
           <h3 class="font-heading font-bold text-slate-800 border-b pb-3">About PeerLink</h3>
           <div class="text-xs text-slate-600 space-y-2">
             <p><strong>System Name:</strong> PeerLink (v1.0.0-Prototype)</p>
-            <p><strong>Focus:</strong> Course similarity, technical skill sets, and schedule compatibility matching.</p>
-            <p><strong>College Section:</strong> College of Computer Studies, Pamantasan ng Lungsod ng Pasig (PLP) • BSIT 3A</p>
+            <p><strong>Focus:</strong> Subject compatibility, skill sets, and study schedule matching for secondary schools.</p>
+            <p><strong>Research Thesis Project:</strong> Pamantasan ng Lungsod ng Pasig (PLP)</p>
             <p><strong>Adviser:</strong> Noreen A. Perez, DIT</p>
             <p><strong>Development Team:</strong> Mark Vincent Palsimon, John Kris Rivera, Francis Carl Eguerra</p>
             <p><strong>Date of Development:</strong> June 2026</p>
