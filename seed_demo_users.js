@@ -3,7 +3,8 @@ const bcrypt = require('bcrypt');
 const { randomUUID } = require('crypto');
 require('dotenv').config();
 
-const pool = new Pool({
+// Local Pool
+const localPool = new Pool({
   host:     process.env.DB_HOST     || 'localhost',
   port:     parseInt(process.env.DB_PORT || '5432'),
   database: process.env.DB_NAME     || 'peerlink_db',
@@ -11,9 +12,12 @@ const pool = new Pool({
   password: process.env.DB_PASSWORD || '',
 });
 
-// =============================================
-// DEMO ACCOUNTS — edit these freely
-// =============================================
+// Render Pool
+const renderPool = new Pool({
+  connectionString: 'postgresql://postgre:r66THbK7KHNZpb2rBTCsasUPnSlvGrRK@dpg-d914etf7f7vs73d4fqe0-a.singapore-postgres.render.com/peerlink_db',
+  ssl: { rejectUnauthorized: false }
+});
+
 const DEMO_USERS = [
   {
     name:               'Juan Dela Cruz',
@@ -49,12 +53,15 @@ const DEMO_USERS = [
   },
 ];
 
-async function run() {
-  console.log('=== Seeding Demo Users ===\n');
-
+async function seedPool(pool, label) {
+  console.log(`\n--- Seeding Database: ${label} ---`);
+  
   for (const u of DEMO_USERS) {
     const id           = randomUUID();
     const passwordHash = await bcrypt.hash(u.password, 10);
+
+    // Delete existing to allow re-seeding fresh
+    await pool.query('DELETE FROM users WHERE email = $1', [u.email]);
 
     await pool.query(
       `INSERT INTO users (
@@ -67,8 +74,7 @@ async function run() {
          $6,$7,$8,$9,$10,$11,
          $12,$13,$14,
          $15, TRUE, FALSE
-       )
-       ON CONFLICT (email) DO NOTHING`,
+       )`,
       [
         id, u.student_lrn, u.name, u.email, passwordHash,
         u.school_name, u.education_level, u.grade_level,
@@ -80,27 +86,36 @@ async function run() {
       ]
     );
 
-    console.log('✅ Created: ' + u.name + ' (' + u.education_level + ')');
-    console.log('   Email   : ' + u.email);
-    console.log('   Password: ' + u.password);
-    console.log('   LRN     : ' + u.student_lrn);
-    console.log('');
+    console.log(`✅ Created: ${u.name} (${u.education_level})`);
   }
 
-  // Confirm what's in the DB
-  const rows = await pool.query(
-    'SELECT name, email, education_level, grade_level, school_name FROM users WHERE is_admin = false ORDER BY created_at'
-  );
-  console.log('=== Current Non-Admin Users ===');
-  rows.rows.forEach(r => {
-    console.log('  - ' + r.name + ' | ' + r.email + ' | ' + r.education_level + ' ' + r.grade_level + ' | ' + r.school_name);
-  });
-
-  await pool.end();
-  console.log('\nDone!');
+  // Display user counts
+  const countRes = await pool.query('SELECT COUNT(*) FROM users WHERE is_admin = false');
+  console.log(`📊 Non-admin user count in ${label}: ${countRes.rows[0].count}`);
 }
 
-run().catch(e => {
-  console.error('Error:', e.message);
-  pool.end();
-});
+async function run() {
+  console.log('🚀 Seeding JHS and SHS Demo accounts...');
+  
+  // Seed local
+  try {
+    await seedPool(localPool, 'Local PostgreSQL');
+  } catch(err) {
+    console.error('Local database seeding error:', err.message);
+  } finally {
+    await localPool.end();
+  }
+
+  // Seed Render
+  try {
+    await seedPool(renderPool, 'Render Cloud DB');
+  } catch(err) {
+    console.error('Render cloud database seeding error:', err.message);
+  } finally {
+    await renderPool.end();
+  }
+
+  console.log('\n🎉 Seeding complete on both databases!');
+}
+
+run();
