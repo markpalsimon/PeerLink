@@ -3922,16 +3922,22 @@ document.addEventListener("DOMContentLoaded", async () => {
       const headerSection = document.getElementById('chat-header-online-status');
       const headerStatus = headerSection;
       
-      // Update partner avatar dynamically
-      const partnerAvatarContainer = convPanel ? convPanel.querySelector('.w-8.h-8') : null;
+      // Update partner avatar dynamically (target inside the relative class specifically to avoid back-button)
+      const partnerAvatarContainer = convPanel ? convPanel.querySelector('.relative .w-8.h-8') : null;
       if (partnerAvatarContainer) {
         partnerAvatarContainer.innerHTML = renderAvatar(activePartnerObj ? activePartnerObj.avatar : null, 'text-base', 'w-full h-full object-cover rounded-full');
+      }
+
+      // Update online status text/color and dot
+      const isOnline = activeChatCollabId && (window.onlineUserIds || new Set()).has(String(activeChatCollabId));
+      if (headerSection) {
+        headerSection.textContent = isOnline ? '● Online' : '● Offline';
+        headerSection.className = isOnline ? 'text-[10px] text-emerald-500 font-semibold' : 'text-[10px] text-slate-400';
       }
 
       // Update online dot on header
       const partnerDot = convPanel ? convPanel.querySelector('.absolute.bottom-0.right-0') : null;
       if (partnerDot) {
-        const isOnline = activeChatCollabId && (window.onlineUserIds || new Set()).has(String(activeChatCollabId));
         partnerDot.className = `absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full ${isOnline ? 'bg-emerald-400' : 'bg-slate-300'} border-2 border-white`;
       }
       if (listPanel && convPanel && isMobile) {
@@ -3987,7 +3993,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       // 1. Update Active Partner Header Name and details
       if (headerName) headerName.textContent = activePartnerObj ? activePartnerObj.name : 'Select a conversation';
-      if (headerSection) headerSection.textContent = activePartnerObj ? `${activePartnerObj.gradeLevel || activePartnerObj.yearSection || ''} • ${activePartnerObj.schoolName || activePartnerObj.program || ''}` : '';
+      if (headerSection && !activeChatCollabId) {
+        headerSection.textContent = activePartnerObj ? `${activePartnerObj.gradeLevel || activePartnerObj.yearSection || ''} • ${activePartnerObj.schoolName || activePartnerObj.program || ''}` : '';
+      }
 
       // 4. Update Left Sidebar Room List last-texts
       partners.forEach(p => {
