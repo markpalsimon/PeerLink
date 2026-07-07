@@ -3851,6 +3851,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       // Only auto-select on desktop, leave null on mobile so it shows the list first
       if (window.innerWidth >= 768) {
         activeChatCollabId = partners[0].id;
+        // Fetch fresh messages for the auto-selected chat
+        const autoRoomId = [currentUser.id, activeChatCollabId].sort().join('_');
+        db.getChatRoom(autoRoomId).catch(() => {});
       }
     }
 
@@ -4218,12 +4221,21 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  window.selectActiveChat = function(partnerId) {
+  window.selectActiveChat = async function(partnerId) {
     activeChatCollabId = partnerId;
     // Mark messages as read when opening the chat
     const roomId = [currentUser.id, partnerId].sort().join('_');
     db.markMessagesAsRead(roomId, currentUser.id).catch(() => {});
+    
+    // Immediately show what we have in cache (fast first render)
     renderMessagesPane();
+    
+    // Then fetch fresh messages from server and re-render
+    try {
+      await db.getChatRoom(roomId);
+      renderMessagesPane(); // Re-render with server-fresh data
+    } catch(e) {}
+
     // On mobile: hide list panel, show conversation panel
     if (window.innerWidth < 768) {
       const listPanel = document.getElementById('chat-list-panel');
