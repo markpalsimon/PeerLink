@@ -278,6 +278,8 @@ html.dark tr:hover {
 @media (min-width: 1024px) {
   .sidebar-slim {
     width: 64px;
+    height: 100%;
+    align-self: stretch;
   }
   .sidebar-slim:hover {
     width: 240px;
