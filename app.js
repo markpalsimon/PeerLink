@@ -478,9 +478,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     activeNav.querySelectorAll("a[id^='side-link']").forEach(link => {
       const endsWithPane = link.id.endsWith(paneId);
       if (endsWithPane) {
-        link.className = "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-white bg-slate-800 transition-colors";
+        link.classList.add("active-nav");
       } else {
-        link.className = "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium hover:text-white hover:bg-slate-800/55 transition-colors";
+        link.classList.remove("active-nav");
       }
     });
 
@@ -524,12 +524,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     // De-highlight all sub-navs first
     const adminNav = document.getElementById("admin-nav");
     adminNav.querySelectorAll("a[id^='side-link-admin-']").forEach(link => {
-      link.className = "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium hover:text-white hover:bg-slate-800/55 transition-colors";
+      link.classList.remove("active-nav");
     });
     // Highlight selected sub-nav
     const selectedLink = document.getElementById(`side-link-admin-${tabId}`);
     if (selectedLink) {
-      selectedLink.className = "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-white bg-slate-800 transition-colors";
+      selectedLink.classList.add("active-nav");
     }
 
     // Scroll to the card containing that section

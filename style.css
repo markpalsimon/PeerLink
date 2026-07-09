@@ -270,6 +270,295 @@ html.dark tr:hover {
   transform: translateX(0) !important;
 }
 
+/* ================================================================
+   SLIM / ICONIC SIDEBAR — Desktop & Laptop
+   ================================================================ */
+
+/* Default slim state: icon-only rail (64px) */
+@media (min-width: 1024px) {
+  .sidebar-slim {
+    width: 64px;
+  }
+  .sidebar-slim:hover {
+    width: 240px;
+    box-shadow: 4px 0 24px rgba(0,0,0,0.35);
+  }
+
+  /* Brand header */
+  .sidebar-slim .sidebar-brand {
+    height: 64px;
+    padding: 0 12px;
+    justify-content: center;
+    position: relative;
+  }
+  .sidebar-slim:hover .sidebar-brand {
+    justify-content: flex-start;
+    padding: 0 18px;
+  }
+
+  /* Icon-only logo visible when slim, hidden when expanded */
+  .sidebar-slim .sidebar-logo-icon {
+    display: flex;
+    opacity: 1;
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    transition: opacity 0.15s ease;
+  }
+  .sidebar-slim:hover .sidebar-logo-icon {
+    display: none;
+  }
+
+  /* Full logo hidden when slim, visible when expanded */
+  .sidebar-slim .sidebar-logo-full {
+    display: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+  .sidebar-slim:hover .sidebar-logo-full {
+    display: flex;
+    opacity: 1;
+  }
+
+  /* Nav items */
+  .sidebar-slim .sidebar-nav-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    padding: 12px 0;
+    margin: 1px 8px;
+    border-radius: 10px;
+    color: #94a3b8;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background 0.18s ease, color 0.18s ease, padding 0.25s ease, gap 0.25s ease, justify-content 0.1s ease, margin 0.25s ease;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .sidebar-slim:hover .sidebar-nav-item {
+    justify-content: flex-start;
+    gap: 12px;
+    padding: 10px 14px;
+    margin: 1px 8px;
+  }
+  .sidebar-slim .sidebar-nav-item:hover {
+    background: rgba(148,163,184,0.12);
+    color: #fff;
+  }
+  .sidebar-slim .sidebar-nav-item.active-nav {
+    background: rgba(99,102,241,0.2);
+    color: #a5b4fc;
+    border-left: 2px solid #6366f1;
+  }
+  .sidebar-slim:hover .sidebar-nav-item.active-nav {
+    background: rgba(99,102,241,0.2);
+    border-left: 2px solid #6366f1;
+  }
+
+  /* Nav icon wrapper — always centered, never shrinks */
+  .sidebar-slim .sidebar-nav-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    transition: width 0.25s ease;
+  }
+  .sidebar-slim:hover .sidebar-nav-icon {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* Nav labels: hidden in slim, fade in on expand */
+  .sidebar-slim .sidebar-nav-label {
+    opacity: 0;
+    max-width: 0;
+    overflow: hidden;
+    transition: opacity 0.2s ease 0.05s, max-width 0.25s ease;
+    pointer-events: none;
+  }
+  .sidebar-slim:hover .sidebar-nav-label {
+    opacity: 1;
+    max-width: 160px;
+    pointer-events: auto;
+  }
+
+  /* Footer */
+  .sidebar-slim .sidebar-footer {
+    padding: 10px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .sidebar-slim .sidebar-footer-user {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    overflow: hidden;
+    transition: gap 0.25s ease;
+    padding: 4px;
+    border-radius: 10px;
+  }
+  .sidebar-slim:hover .sidebar-footer-user {
+    gap: 10px;
+  }
+
+  /* Footer avatar always visible and centered */
+  .sidebar-slim .sidebar-footer-user #side-avatar {
+    flex-shrink: 0;
+    margin: 0 auto;
+    transition: margin 0.25s ease;
+  }
+  .sidebar-slim:hover .sidebar-footer-user #side-avatar {
+    margin: 0;
+  }
+
+  /* Footer text: hidden in slim, visible on hover */
+  .sidebar-slim .sidebar-footer-info {
+    opacity: 0;
+    max-width: 0;
+    overflow: hidden;
+    transition: opacity 0.2s ease 0.05s, max-width 0.25s ease;
+    flex: 1;
+  }
+  .sidebar-slim:hover .sidebar-footer-info {
+    opacity: 1;
+    max-width: 160px;
+  }
+
+  /* Logout button */
+  .sidebar-slim .sidebar-logout-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    width: 100%;
+    padding: 8px;
+    background: rgba(239,68,68,0.08);
+    border: 1px solid rgba(239,68,68,0.18);
+    color: #f87171;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.18s ease, color 0.18s ease, gap 0.25s ease;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .sidebar-slim:hover .sidebar-logout-btn {
+    gap: 8px;
+  }
+  .sidebar-slim .sidebar-logout-btn:hover {
+    background: rgba(239,68,68,0.18);
+    color: #fca5a5;
+  }
+  .sidebar-slim .sidebar-logout-label {
+    opacity: 0;
+    max-width: 0;
+    overflow: hidden;
+    transition: opacity 0.2s ease 0.05s, max-width 0.25s ease;
+  }
+  .sidebar-slim:hover .sidebar-logout-label {
+    opacity: 1;
+    max-width: 120px;
+  }
+}
+
+/* Mobile: full-width slide-out, all labels visible */
+@media (max-width: 1023px) {
+  .sidebar-slim {
+    width: 280px;
+  }
+  .sidebar-slim .sidebar-logo-icon { display: none; }
+  .sidebar-slim .sidebar-logo-full { display: flex; }
+  .sidebar-slim .sidebar-brand {
+    padding: 20px 24px;
+    justify-content: flex-start;
+  }
+  .sidebar-slim .sidebar-nav-item {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 12px;
+    padding: 11px 16px;
+    margin: 1px 10px;
+    border-radius: 10px;
+    color: #94a3b8;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background 0.18s ease, color 0.18s ease;
+  }
+  .sidebar-slim .sidebar-nav-item:hover {
+    background: rgba(148,163,184,0.12);
+    color: #fff;
+  }
+  .sidebar-slim .sidebar-nav-item.active-nav {
+    background: rgba(99,102,241,0.2);
+    color: #a5b4fc;
+    border-left: 2px solid #6366f1;
+  }
+  .sidebar-slim .sidebar-nav-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+  }
+  .sidebar-slim .sidebar-nav-label {
+    opacity: 1;
+    max-width: none;
+    overflow: visible;
+  }
+  .sidebar-slim .sidebar-footer {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .sidebar-slim .sidebar-footer-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px;
+  }
+  .sidebar-slim .sidebar-footer-info {
+    opacity: 1;
+    max-width: none;
+    overflow: hidden;
+    flex: 1;
+  }
+  .sidebar-slim .sidebar-logout-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 12px;
+    background: rgba(239,68,68,0.08);
+    border: 1px solid rgba(239,68,68,0.18);
+    color: #f87171;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.18s ease, color 0.18s ease;
+    white-space: nowrap;
+  }
+  .sidebar-slim .sidebar-logout-btn:hover {
+    background: rgba(239,68,68,0.18);
+    color: #fca5a5;
+  }
+  .sidebar-slim .sidebar-logout-label {
+    opacity: 1;
+    max-width: none;
+  }
+}
+
 /* Mobile bottom nav active state */
 .mobile-nav-btn {
   -webkit-tap-highlight-color: transparent;
