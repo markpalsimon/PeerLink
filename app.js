@@ -1995,19 +1995,24 @@ document.addEventListener("DOMContentLoaded", async () => {
       );
 
       let statusBtn = "";
+      let swipeAction = "connect"; // default swipe-right action
       if (!existing) {
         statusBtn = `<button onclick="sendConnect('${p.id}')" class="bg-brand-purple hover:bg-opacity-90 text-white font-bold text-xs px-3 py-1.5 rounded-lg transition-all">Connect</button>`;
+        swipeAction = "connect";
       } else if (existing.status === "pending") {
         if (existing.senderId === currentUser.id) {
           statusBtn = `<span class="text-xs font-bold text-slate-400 bg-slate-100 border px-3 py-1.5 rounded-lg">Pending</span>`;
+          swipeAction = "none";
         } else {
           statusBtn = `
             <button onclick="acceptConnect('${p.id}')" class="bg-brand-teal hover:bg-opacity-90 text-white font-bold text-xs px-3 py-1.5 rounded-lg transition-all">Accept</button>
             <button onclick="declineConnect('${p.id}')" class="bg-red-500 hover:bg-red-600 text-white font-bold text-xs px-3 py-1.5 rounded-lg transition-all">Decline</button>
           `;
+          swipeAction = "accept";
         }
       } else if (existing.status === "accepted") {
         statusBtn = `<span class="text-xs font-bold text-brand-teal bg-teal-50 border border-teal-100 px-3 py-1.5 rounded-lg">Connected</span>`;
+        swipeAction = "none";
       }
 
       const coursesHTML = m.sharedCourses.length > 0 ? 
@@ -2027,7 +2032,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         : `<span class="inline-block w-2 h-2 rounded-full bg-slate-300 border-2 border-white shadow-sm" title="Offline"></span>`;
 
       return `
-        <tr class="hover:bg-slate-50/50">
+        <tr class="hover:bg-slate-50/50 match-row" data-pid="${p.id}" data-swipe="${swipeAction}">
           <td class="p-4 pl-6">
             <div class="flex items-center gap-3">
               <div class="relative">
@@ -2061,6 +2066,134 @@ document.addEventListener("DOMContentLoaded", async () => {
         </tr>
       `;
     }).join('');
+
+    // Attach swipe handlers after DOM update
+    attachMatchSwipeHandlers();
+  }
+
+  // ── Swipe handler for match rows (pointer events: works on mouse, touch, stylus, trackpad) ──
+  function attachMatchSwipeHandlers() {
+    const SWIPE_THRESHOLD = 80;   // px to trigger action
+    const VERTICAL_CANCEL = 12;   // px vertical drift cancels horizontal swipe
+
+    document.querySelectorAll('.match-row').forEach(row => {
+      // Remove old listeners by cloning
+      const fresh = row.cloneNode(true);
+      row.parentNode.replaceChild(fresh, row);
+      const tr = fresh;
+
+      const pid = tr.dataset.pid;
+      const action = tr.dataset.swipe;
+
+      let startX = 0, startY = 0, currentX = 0;
+      let dragging = false;
+      let cancelled = false;
+      let animating = false;
+
+      function getInnerContent() {
+        // We animate all td cells together via a wrapper-like approach
+        return tr;
+      }
+
+      function applyTranslate(dx) {
+        tr.style.transform = `translateX(${dx}px)`;
+        tr.style.transition = 'none';
+        // Tint feedback
+        if (dx > 20) {
+          tr.style.background = `rgba(99,102,241,${Math.min(dx / 200, 0.18)})`;
+        } else if (dx < -20) {
+          tr.style.background = `rgba(239,68,68,${Math.min(-dx / 200, 0.1)})`;
+        } else {
+          tr.style.background = '';
+        }
+      }
+
+      function snapBack() {
+        tr.style.transition = 'transform 0.3s cubic-bezier(0.34,1.56,0.64,1), background 0.3s ease';
+        tr.style.transform = 'translateX(0)';
+        tr.style.background = '';
+        animating = false;
+      }
+
+      function triggerAction(dir) {
+        // Flash animate out, then snap back
+        const targetX = dir > 0 ? 120 : -120;
+        tr.style.transition = 'transform 0.18s ease-out';
+        tr.style.transform = `translateX(${targetX}px)`;
+        animating = true;
+        setTimeout(() => {
+          snapBack();
+          if (dir > 0) {
+            // Swipe right → connect/accept
+            if (action === 'connect') sendConnect(pid);
+            else if (action === 'accept') acceptConnect(pid);
+          } else {
+            // Swipe left → open profile
+            openPartnerProfile(pid);
+          }
+        }, 180);
+      }
+
+      tr.addEventListener('pointerdown', e => {
+        if (animating) return;
+        startX = e.clientX;
+        startY = e.clientY;
+        currentX = 0;
+        dragging = false;
+        cancelled = false;
+        // Don't capture on buttons/anchors
+        if (e.target.closest('button, a')) return;
+        tr.setPointerCapture(e.pointerId);
+        dragging = true;
+      }, { passive: true });
+
+      tr.addEventListener('pointermove', e => {
+        if (!dragging || animating) return;
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+
+        // If vertical movement exceeds threshold first, cancel swipe (let scroll happen)
+        if (!cancelled && Math.abs(dy) > VERTICAL_CANCEL && Math.abs(dy) > Math.abs(dx)) {
+          cancelled = true;
+          dragging = false;
+          snapBack();
+          return;
+        }
+        if (cancelled) return;
+
+        currentX = dx;
+        // Only allow swipe if action exists OR left swipe for profile
+        if (action === 'none' && dx > 0) {
+          // No action — just slight resistance
+          applyTranslate(dx * 0.15);
+        } else {
+          applyTranslate(dx);
+        }
+      }, { passive: true });
+
+      tr.addEventListener('pointerup', e => {
+        if (!dragging || cancelled || animating) {
+          dragging = false;
+          return;
+        }
+        dragging = false;
+        const dx = currentX;
+
+        if (dx >= SWIPE_THRESHOLD && action !== 'none') {
+          triggerAction(1);
+        } else if (dx <= -SWIPE_THRESHOLD) {
+          triggerAction(-1);
+        } else {
+          snapBack();
+        }
+      }, { passive: true });
+
+      tr.addEventListener('pointercancel', () => {
+        dragging = false;
+        cancelled = true;
+        snapBack();
+      }, { passive: true });
+    });
   }
 
   function renderMatchesPane() {
