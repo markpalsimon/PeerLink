@@ -49,18 +49,18 @@ async function run() {
     }
 
     if (target === 'all' || target === 'meetings') {
-      const res = await pool.query('SELECT id, topic, host_id, guest_id, status, scheduled_at FROM meetings ORDER BY created_at DESC LIMIT 10');
+      const res = await pool.query('SELECT id, topic, host_id, guest_id, status, meeting_date FROM meetings ORDER BY created_at DESC LIMIT 10');
       console.log(`\n📅 MEETINGS (latest 10):`);
       console.table(res.rows);
     }
 
     if (target === 'all' || target === 'otp') {
       try {
-        const res = await pool.query('SELECT email, otp_code, expires_at, used FROM otp_codes ORDER BY expires_at DESC LIMIT 10');
+        const res = await pool.query('SELECT email, code, expires_at FROM otp_store ORDER BY expires_at DESC LIMIT 10');
         console.log(`\n🔑 OTP CODES (latest 10):`);
         console.table(res.rows);
       } catch(e) {
-        console.log('\n🔑 OTP table not found (may not exist yet)');
+        console.log('\n🔑 OTP table not found (may not exist yet):', e.message);
       }
     }
 
