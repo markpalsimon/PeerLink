@@ -592,8 +592,10 @@ html.dark tr:hover {
 }
 
 /* Mobile bottom nav show/hide */
-.system-active #mobile-bottom-nav {
-  display: block;
+@media (max-width: 1023px) {
+  .system-active #mobile-bottom-nav {
+    display: block;
+  }
 }
 
 /* Prevent body scroll when mobile sidebar is open */

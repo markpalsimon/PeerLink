@@ -181,7 +181,13 @@ window.updateMobileBottomNav = function(paneId) {
 /** Show the mobile bottom nav bar (called when a user logs in) */
 window.showMobileBottomNav = function() {
   const nav = document.getElementById('mobile-bottom-nav');
-  if (nav) nav.classList.remove('hidden');
+  if (nav) {
+    if (window.innerWidth < 1024) {
+      nav.classList.remove('hidden');
+    } else {
+      nav.classList.add('hidden');
+    }
+  }
 };
 
 /** Hide the mobile bottom nav bar (called on logout) */
@@ -463,6 +469,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     sysContainer.classList.remove("hidden");
     publicHeader.classList.add("hidden");
     publicFooter.classList.add("hidden");
+    document.body.classList.add("system-active");
 
     // Hide AI chat widget when logged in
     const chatToggle = document.getElementById('ai-chat-toggle');
@@ -626,6 +633,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     stopSyncLoop();
     localStorage.removeItem("peerlink_session_user");
     currentUser = null;
+    document.body.classList.remove("system-active");
     hideMobileBottomNav();
     showPublicView("landing");
     showToast('You have been logged out. See you soon! 👋', 'info', 3000);
@@ -651,6 +659,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       stopSyncLoop();
       localStorage.removeItem("peerlink_session_user");
       currentUser = null;
+      document.body.classList.remove("system-active");
       document.getElementById("system-container").classList.add("hidden");
       document.getElementById("public-header").classList.remove("hidden");
       document.getElementById("public-footer").classList.remove("hidden");
