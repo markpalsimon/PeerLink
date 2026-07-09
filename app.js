@@ -2071,10 +2071,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     attachMatchSwipeHandlers();
   }
 
-  // ── Swipe handler for match rows (pointer events: works on mouse, touch, stylus, trackpad) ──
+  // ── Swipe handler for match rows (with touch event overrides for iOS Safari compatibility) ──
   function attachMatchSwipeHandlers() {
     const SWIPE_THRESHOLD = 80;   // px to trigger action
-    const VERTICAL_CANCEL = 12;   // px vertical drift cancels horizontal swipe
+    const VERTICAL_CANCEL = 15;   // px vertical drift cancels horizontal swipe
 
     document.querySelectorAll('.match-row').forEach(row => {
       // Remove old listeners by cloning
@@ -2090,15 +2090,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       let cancelled = false;
       let animating = false;
 
-      function getInnerContent() {
-        // We animate all td cells together via a wrapper-like approach
-        return tr;
-      }
-
       function applyTranslate(dx) {
         tr.style.transform = `translateX(${dx}px)`;
         tr.style.transition = 'none';
-        // Tint feedback
         if (dx > 20) {
           tr.style.background = `rgba(99,102,241,${Math.min(dx / 200, 0.18)})`;
         } else if (dx < -20) {
@@ -2116,7 +2110,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
 
       function triggerAction(dir) {
-        // Flash animate out, then snap back
         const targetX = dir > 0 ? 120 : -120;
         tr.style.transition = 'transform 0.18s ease-out';
         tr.style.transform = `translateX(${targetX}px)`;
@@ -2124,35 +2117,30 @@ document.addEventListener("DOMContentLoaded", async () => {
         setTimeout(() => {
           snapBack();
           if (dir > 0) {
-            // Swipe right → connect/accept
             if (action === 'connect') sendConnect(pid);
             else if (action === 'accept') acceptConnect(pid);
           } else {
-            // Swipe left → open profile
             openPartnerProfile(pid);
           }
         }, 180);
       }
 
-      tr.addEventListener('pointerdown', e => {
+      // Unified touch start
+      function handleStart(clientX, clientY) {
         if (animating) return;
-        startX = e.clientX;
-        startY = e.clientY;
+        startX = clientX;
+        startY = clientY;
         currentX = 0;
-        dragging = false;
-        cancelled = false;
-        // Don't capture on buttons/anchors
-        if (e.target.closest('button, a')) return;
-        tr.setPointerCapture(e.pointerId);
         dragging = true;
-      }, { passive: true });
+        cancelled = false;
+      }
 
-      tr.addEventListener('pointermove', e => {
+      // Unified touch move
+      function handleMove(clientX, clientY, e) {
         if (!dragging || animating) return;
-        const dx = e.clientX - startX;
-        const dy = e.clientY - startY;
+        const dx = clientX - startX;
+        const dy = clientY - startY;
 
-        // If vertical movement exceeds threshold first, cancel swipe (let scroll happen)
         if (!cancelled && Math.abs(dy) > VERTICAL_CANCEL && Math.abs(dy) > Math.abs(dx)) {
           cancelled = true;
           dragging = false;
@@ -2161,17 +2149,21 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
         if (cancelled) return;
 
+        // Prevent native horizontal scrolling in Safari/Chrome
+        if (e && e.cancelable) {
+          e.preventDefault();
+        }
+
         currentX = dx;
-        // Only allow swipe if action exists OR left swipe for profile
         if (action === 'none' && dx > 0) {
-          // No action — just slight resistance
           applyTranslate(dx * 0.15);
         } else {
           applyTranslate(dx);
         }
-      }, { passive: true });
+      }
 
-      tr.addEventListener('pointerup', e => {
+      // Unified touch end
+      function handleEnd() {
         if (!dragging || cancelled || animating) {
           dragging = false;
           return;
@@ -2186,13 +2178,48 @@ document.addEventListener("DOMContentLoaded", async () => {
         } else {
           snapBack();
         }
+      }
+
+      // --- Bind native touch events for perfect Safari / iPhone support ---
+      tr.addEventListener('touchstart', e => {
+        if (e.target.closest('button, a')) return;
+        const touch = e.touches[0];
+        handleStart(touch.clientX, touch.clientY);
       }, { passive: true });
 
-      tr.addEventListener('pointercancel', () => {
+      tr.addEventListener('touchmove', e => {
+        if (!dragging) return;
+        const touch = e.touches[0];
+        handleMove(touch.clientX, touch.clientY, e);
+      }, { passive: false }); // Needs passive: false to allow preventDefault (prevents native swipe-back gestures)
+
+      tr.addEventListener('touchend', () => {
+        handleEnd();
+      }, { passive: true });
+
+      tr.addEventListener('touchcancel', () => {
         dragging = false;
         cancelled = true;
         snapBack();
       }, { passive: true });
+
+      // --- Bind Mouse/Pointer fallback for Desktop support ---
+      tr.addEventListener('mousedown', e => {
+        if (e.target.closest('button, a')) return;
+        handleStart(e.clientX, e.clientY);
+        
+        const mouseMoveHandler = ev => {
+          handleMove(ev.clientX, ev.clientY, ev);
+        };
+        const mouseUpHandler = () => {
+          handleEnd();
+          window.removeEventListener('mousemove', mouseMoveHandler);
+          window.removeEventListener('mouseup', mouseUpHandler);
+        };
+        
+        window.addEventListener('mousemove', mouseMoveHandler);
+        window.addEventListener('mouseup', mouseUpHandler);
+      });
     });
   }
 

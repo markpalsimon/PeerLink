@@ -829,9 +829,12 @@ body.sidebar-open-body {
    SWIPEABLE MATCH ROWS
    ================================================================ */
 
-/* Table scroll container — allow vertical scroll, don't block horizontal pointer move */
 #matches-table-body {
   overscroll-behavior-x: none;
+  touch-action: pan-y;
+}
+.overflow-x-auto {
+  touch-action: pan-y;
 }
 
 /* Each swipeable row */
