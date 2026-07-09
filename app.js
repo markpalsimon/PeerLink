@@ -1,9 +1,8 @@
 // PeerLink Logic Controller (Tailwind & Storyboard Edition)
 
-// ============================================================
 // TOAST NOTIFICATION SYSTEM
 // Types: 'success' | 'error' | 'warning' | 'info'
-// ============================================================
+
 function showToast(message, type = 'success', duration = 3500) {
   const stack = document.getElementById('toast-stack');
   if (!stack) return;
@@ -1759,23 +1758,23 @@ document.addEventListener("DOMContentLoaded", async () => {
               ${upcomingMeetingHTML}
             </div>
 
-            <!-- Top Study Partners -->
-            <div class="bg-white border rounded-2xl p-6 shadow-sm">
-              <div class="flex justify-between items-center mb-4">
-                <h3 class="font-heading font-bold text-slate-800">Top Study Partners</h3>
-                <span class="text-xs font-bold text-brand-purple hover:underline cursor-pointer" onclick="showSystemView('matches')">View All</span>
-              </div>
-              <div class="grid grid-cols-2 sm:grid-cols-3 keep-2col gap-4">
-                ${recs.slice(0, 3).map(r => `
-                  <div class="bg-slate-50 hover:bg-slate-100/80 border rounded-xl p-4 text-center cursor-pointer transition-all" onclick="openPartnerProfile('${r.candidate.id}')">
-                    <div class="w-12 h-12 rounded-full bg-slate-100 border-2 border-indigo-100 flex items-center justify-center text-3xl overflow-hidden mb-2 mx-auto">${renderAvatar(r.candidate.avatar, 'text-3xl', 'w-full h-full object-cover rounded-full')}</div>
-                    <h4 class="font-semibold text-slate-800 text-xs truncate">${r.candidate.name}</h4>
-                    <p class="text-[10px] text-slate-400 truncate">${r.candidate.gradeLevel || r.candidate.yearSection || ''} • ${r.candidate.schoolName || r.candidate.program || ''}</p>
-                    <span class="inline-block bg-indigo-50 border border-indigo-100 text-brand-purple text-[10px] font-bold px-2 py-0.5 rounded-full mt-2">${r.match.total}% Match</span>
-                  </div>
-                `).join('')}
-              </div>
-            </div>
+             <!-- Top Study Partners -->
+             <div class="bg-white border rounded-2xl p-6 shadow-sm">
+               <div class="flex justify-between items-center mb-4">
+                 <h3 class="font-heading font-bold text-slate-800">Top Study Partners</h3>
+                 <span class="text-xs font-bold text-brand-purple hover:underline cursor-pointer" onclick="showSystemView('matches')">View All</span>
+               </div>
+               <div class="flex flex-wrap gap-4">
+                 ${recs.slice(0, 3).map(r => `
+                   <div class="flex-1 min-w-[180px] bg-slate-50 hover:bg-slate-100/80 border rounded-xl p-4 text-center cursor-pointer transition-all" onclick="openPartnerProfile('${r.candidate.id}')">
+                     <div class="w-12 h-12 rounded-full bg-slate-100 border-2 border-indigo-100 flex items-center justify-center text-3xl overflow-hidden mb-2 mx-auto">${renderAvatar(r.candidate.avatar, 'text-3xl', 'w-full h-full object-cover rounded-full')}</div>
+                     <h4 class="font-semibold text-slate-800 text-xs truncate">${r.candidate.name}</h4>
+                     <p class="text-[10px] text-slate-400 truncate">${r.candidate.gradeLevel || r.candidate.yearSection || ''} • ${r.candidate.schoolName || r.candidate.program || ''}</p>
+                     <span class="inline-block bg-indigo-50 border border-indigo-100 text-brand-purple text-[10px] font-bold px-2 py-0.5 rounded-full mt-2">${r.match.total}% Match</span>
+                   </div>
+                 `).join('')}
+               </div>
+             </div>
           </div>
 
           <!-- Column 3: Profile Progress & Quick Stats -->
