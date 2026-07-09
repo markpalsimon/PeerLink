@@ -265,10 +265,6 @@ html.dark tr:hover {
   background-color: #1e293b !important;
 }
 
-/* =============================================
-   RESPONSIVE DESIGN — MOBILE & TABLET
-   ============================================= */
-
 /* Sidebar slide-in when open */
 #main-sidebar.sidebar-open {
   transform: translateX(0) !important;
@@ -368,10 +364,6 @@ body.sidebar-open-body {
 
 /* ---- Responsive grid helpers for panes ---- */
 @media (max-width: 767px) {
-  .grid-cols-3, .md\:grid-cols-3,
-  .grid-cols-4, .md\:grid-cols-4 {
-    grid-template-columns: 1fr 1fr;
-  }
   .grid-cols-2:not(.keep-2col) {
     grid-template-columns: 1fr;
   }
