@@ -828,37 +828,35 @@ body.sidebar-open-body {
 }
 
 /* ================================================================
-   SWIPEABLE MATCH ROWS
+   SWIPEABLE MATCH ROWS — div-based (transforms work on divs in all browsers)
    ================================================================ */
 
 #matches-table-body {
   overscroll-behavior-x: none;
   touch-action: pan-y;
 }
-.overflow-x-auto {
-  touch-action: pan-y;
-}
 
-/* Each swipeable row */
+/* Each swipeable row — display:block ensures transforms work cross-browser */
 .match-row {
+  display: block;
   position: relative;
   will-change: transform;
-  touch-action: pan-y; /* Let vertical scroll through, we handle horizontal */
+  touch-action: pan-y; /* Pass vertical scroll to parent, we own horizontal */
   user-select: none;
   -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
   cursor: default;
-  overflow: hidden;
 }
 
-.match-row:active {
-  /* Prevent default blue highlight on mobile tap */
-  -webkit-tap-highlight-color: transparent;
+/* Swipe colour hint during drag — handled by JS inline style */
+.match-row[style*="translateX"] {
+  z-index: 2;
 }
 
 /* Swipe hint label — mobile only */
 @media (max-width: 767px) {
   #matches-table-body::before {
-    content: '← Swipe left to view profile  |  Swipe right to connect →';
+    content: '\2190 Swipe left to view profile  |  Swipe right to connect \2192';
     display: block;
     text-align: center;
     font-size: 0.65rem;
@@ -868,15 +866,4 @@ body.sidebar-open-body {
     font-weight: 500;
     border-bottom: 1px solid #f1f5f9;
   }
-}
-
-/* Smooth snap-back animation handled by JS (inline style), 
-   but define a will-change hint so browser can composite the layer */
-.match-row[style*="transform"] {
-  z-index: 2;
-}
-
-/* When actively being dragged, show a subtle inset shadow */
-.match-row[style*="translateX"] {
-  box-shadow: inset 0 0 0 1px rgba(99, 102, 241, 0.08);
 }

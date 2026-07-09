@@ -2041,38 +2041,58 @@ document.addEventListener("DOMContentLoaded", async () => {
         : `<span class="inline-block w-2 h-2 rounded-full bg-slate-300 border-2 border-white shadow-sm" title="Offline"></span>`;
 
       return `
-        <tr class="hover:bg-slate-50/50 match-row" data-pid="${p.id}" data-swipe="${swipeAction}">
-          <td class="p-4 pl-6">
-            <div class="flex items-center gap-3">
-              <div class="relative">
-                <div class="text-2xl w-10 h-10 rounded-full bg-slate-100 border flex items-center justify-center overflow-hidden">${renderAvatar(p.avatar, 'text-2xl', 'w-full h-full object-cover rounded-full')}</div>
-                <div class="absolute -bottom-0.5 -right-0.5">${onlineBadge}</div>
-              </div>
-              <div>
-                <h4 class="font-bold text-slate-800">${p.name}</h4>
-                <p class="text-xs text-slate-400 truncate max-w-[200px]">${p.gradeLevel || p.yearSection || ''} • ${p.schoolName || p.program || ''}</p>
+        <div class="match-row" data-pid="${p.id}" data-swipe="${swipeAction}">
+          <!-- Desktop: grid row (lg+) -->
+          <div class="hidden lg:grid lg:items-center hover:bg-slate-50/50" style="grid-template-columns: 2.2fr 0.7fr 1fr 1fr 1fr 1.5fr;">
+            <div class="p-4 pl-6">
+              <div class="flex items-center gap-3">
+                <div class="relative">
+                  <div class="text-2xl w-10 h-10 rounded-full bg-slate-100 border flex items-center justify-center overflow-hidden">${renderAvatar(p.avatar, 'text-2xl', 'w-full h-full object-cover rounded-full')}</div>
+                  <div class="absolute -bottom-0.5 -right-0.5">${onlineBadge}</div>
+                </div>
+                <div>
+                  <h4 class="font-bold text-slate-800">${p.name}</h4>
+                  <p class="text-xs text-slate-400 truncate max-w-[200px]">${p.gradeLevel || p.yearSection || ''} • ${p.schoolName || p.program || ''}</p>
+                </div>
               </div>
             </div>
-          </td>
-          <td class="p-4">
-            <span class="inline-flex bg-green-50 border border-green-100 text-green-600 text-xs font-bold px-2 py-0.5 rounded-full">${m.total}% Match</span>
-          </td>
-          <td class="p-4">
-            <div>${coursesHTML}</div>
-          </td>
-          <td class="p-4">
-            <div>${skillsHTML}</div>
-          </td>
-          <td class="p-4">
-            <span class="text-xs font-medium text-slate-600">${overlapString}</span>
-          </td>
-          <td class="p-4 pr-6 text-right">
-            <div class="inline-flex gap-2 flex-wrap justify-end">
+            <div class="p-4">
+              <span class="inline-flex bg-green-50 border border-green-100 text-green-600 text-xs font-bold px-2 py-0.5 rounded-full">${m.total}% Match</span>
+            </div>
+            <div class="p-4"><div>${coursesHTML}</div></div>
+            <div class="p-4"><div>${skillsHTML}</div></div>
+            <div class="p-4">
+              <span class="text-xs font-medium text-slate-600">${overlapString}</span>
+            </div>
+            <div class="p-4 pr-6 text-right">
+              <div class="inline-flex gap-2 flex-wrap justify-end">
+                <button onclick="openPartnerProfile('${p.id}')" class="text-slate-500 hover:text-slate-800 border bg-white font-bold text-xs px-3 py-1.5 rounded-lg">View Profile</button>
+                ${statusBtn}
+              </div>
+            </div>
+          </div>
+          <!-- Mobile: compact swipeable card -->
+          <div class="lg:hidden p-4 hover:bg-slate-50/50">
+            <div class="flex items-center gap-3 mb-3">
+              <div class="relative shrink-0">
+                <div class="text-2xl w-11 h-11 rounded-full bg-slate-100 border flex items-center justify-center overflow-hidden">${renderAvatar(p.avatar, 'text-2xl', 'w-full h-full object-cover rounded-full')}</div>
+                <div class="absolute -bottom-0.5 -right-0.5">${onlineBadge}</div>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h4 class="font-bold text-slate-800 text-sm">${p.name}</h4>
+                  <span class="inline-flex bg-green-50 border border-green-100 text-green-600 text-[10px] font-bold px-1.5 py-0.5 rounded-full">${m.total}% match</span>
+                </div>
+                <p class="text-xs text-slate-400 truncate">${p.gradeLevel || p.yearSection || ''} • ${p.schoolName || p.program || ''}</p>
+                <p class="text-[10px] text-slate-400 mt-0.5">📅 ${overlapString}</p>
+              </div>
+            </div>
+            <div class="flex gap-2 flex-wrap items-center">
               <button onclick="openPartnerProfile('${p.id}')" class="text-slate-500 hover:text-slate-800 border bg-white font-bold text-xs px-3 py-1.5 rounded-lg">View Profile</button>
               ${statusBtn}
             </div>
-          </td>
-        </tr>
+          </div>
+        </div>
       `;
     }).join('');
 
@@ -2373,24 +2393,17 @@ document.addEventListener("DOMContentLoaded", async () => {
             <span class="text-xs text-slate-400 font-semibold" id="matches-count-label">${displayList.length} Students listed</span>
           </div>
 
-          <!-- Table -->
-          <div class="overflow-x-auto">
-            <table class="w-full text-left text-sm">
-              <thead class="bg-slate-50 text-[10px] text-slate-400 font-bold uppercase border-b">
-                <tr>
-                  <th class="p-4 pl-6">Student Partner</th>
-                  <th class="p-4">Match Score</th>
-                  <th class="p-4">Shared Subjects</th>
-                  <th class="p-4">Shared Skills</th>
-                  <th class="p-4">Common Availability</th>
-                  <th class="p-4 pr-6 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-slate-100" id="matches-table-body">
-                <!-- Dynamic table rows -->
-              </tbody>
-            </table>
+          <!-- List header (desktop only) -->
+          <div class="hidden lg:grid bg-slate-50 text-[10px] text-slate-400 font-bold uppercase border-b" style="grid-template-columns: 2.2fr 0.7fr 1fr 1fr 1fr 1.5fr;">
+            <div class="p-4 pl-6">Student Partner</div>
+            <div class="p-4">Match Score</div>
+            <div class="p-4">Shared Subjects</div>
+            <div class="p-4">Shared Skills</div>
+            <div class="p-4">Common Availability</div>
+            <div class="p-4 pr-6 text-right">Actions</div>
           </div>
+          <!-- Match rows container -->
+          <div class="divide-y divide-slate-100" id="matches-table-body"></div>
         </div>
       </div>
     `;
