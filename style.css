@@ -471,9 +471,42 @@ html.dark tr:hover {
 
 /* Mobile: full-width slide-out, all labels visible */
 @media (max-width: 1023px) {
+  /* ── Sidebar shell ─────────────────────────────────────────────
+     Use dvh (dynamic viewport height) so the sidebar fills exactly
+     the visible area on iOS Safari (which shrinks the viewport when
+     the address bar is shown). Falls back to 100vh on older browsers. */
   .sidebar-slim {
     width: 280px;
+    height: 100vh;               /* fallback for older browsers */
+    height: 100dvh;              /* iOS Safari: respects dynamic toolbar */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;            /* clip overflow, inner div scrolls */
   }
+
+  /* ── Nav scroll area ───────────────────────────────────────────
+     Grows to fill remaining vertical space and becomes scrollable
+     when there are too many nav items for the screen. */
+  .sidebar-slim > div:first-child {
+    flex: 1 1 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch; /* smooth iOS momentum scroll */
+    min-height: 0;
+  }
+
+  /* ── Footer pinned at bottom ───────────────────────────────────
+     shrink-0 keeps it fixed; safe-area-inset-bottom ensures the
+     logout button never hides under the iOS home indicator bar. */
+  .sidebar-slim .sidebar-footer {
+    flex-shrink: 0;
+    padding: 12px;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
   .sidebar-slim .sidebar-logo-icon { display: none; }
   .sidebar-slim .sidebar-logo-full { display: flex; }
   .sidebar-slim .sidebar-brand {
@@ -516,12 +549,6 @@ html.dark tr:hover {
     max-width: none;
     overflow: visible;
   }
-  .sidebar-slim .sidebar-footer {
-    padding: 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
   .sidebar-slim .sidebar-footer-user {
     display: flex;
     align-items: center;
@@ -540,19 +567,22 @@ html.dark tr:hover {
     justify-content: center;
     gap: 8px;
     width: 100%;
-    padding: 8px 12px;
+    padding: 10px 12px;          /* slightly taller for easier tap */
     background: rgba(239,68,68,0.08);
     border: 1px solid rgba(239,68,68,0.18);
     color: #f87171;
-    border-radius: 8px;
-    font-size: 0.75rem;
+    border-radius: 10px;
+    font-size: 0.8125rem;        /* slightly bigger text on mobile */
     font-weight: 600;
     cursor: pointer;
     transition: background 0.18s ease, color 0.18s ease;
     white-space: nowrap;
+    -webkit-tap-highlight-color: transparent;
+    min-height: 44px;            /* Apple's minimum tap target */
   }
-  .sidebar-slim .sidebar-logout-btn:hover {
-    background: rgba(239,68,68,0.18);
+  .sidebar-slim .sidebar-logout-btn:hover,
+  .sidebar-slim .sidebar-logout-btn:active {
+    background: rgba(239,68,68,0.22);
     color: #fca5a5;
   }
   .sidebar-slim .sidebar-logout-label {
