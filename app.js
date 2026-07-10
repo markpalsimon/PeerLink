@@ -254,6 +254,31 @@ document.addEventListener("DOMContentLoaded", async () => {
     schedule: {} // Day -> [hours]
   };
 
+  // ============================================================
+  // SIDEBAR PROFILE UPDATER
+  // Call this whenever currentUser's name, avatar, school, or
+  // grade changes so the sidebar reflects the latest profile.
+  // ============================================================
+  function updateSidebarProfile(user) {
+    if (!user) return;
+    const sideAvatar = document.getElementById('side-avatar');
+    if (sideAvatar) {
+      if (user.avatar && user.avatar.startsWith('data:image')) {
+        sideAvatar.innerHTML = `<img src="${user.avatar}" class="w-10 h-10 object-cover rounded-full" alt="${user.name || 'avatar'}" />`;
+      } else {
+        sideAvatar.innerHTML = user.avatar || '👤';
+      }
+    }
+    const nameEl = document.getElementById('side-username');
+    if (nameEl) nameEl.textContent = user.name || '';
+    const progEl = document.getElementById('side-program');
+    if (progEl) {
+      const grade  = user.gradeLevel  || user.yearSection || '';
+      const school = user.schoolName  || user.program     || '';
+      progEl.textContent = grade && school ? `${grade} • ${school}` : (grade || school || '');
+    }
+  }
+
   // --- SELECTORS ---
   const pubContainer = document.getElementById("public-container");
   const sysContainer = document.getElementById("system-container");
@@ -566,16 +591,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     localStorage.setItem("peerlink_session_user", user.id);
     
     // Set Sidebar User Details
-    const sideAvatarEl = document.getElementById('side-avatar');
-    if (sideAvatarEl) {
-      if (user.avatar && user.avatar.startsWith('data:image')) {
-        sideAvatarEl.innerHTML = `<img src="${user.avatar}" class="w-10 h-10 object-cover rounded-full" alt="avatar" />`;
-      } else {
-        sideAvatarEl.innerHTML = user.avatar || '👤';
-      }
-    }
-    document.getElementById('side-username').textContent = user.name;
-    document.getElementById('side-program').textContent = `${user.gradeLevel || user.yearSection || ''} • ${user.schoolName || user.program || ''}`;
+    updateSidebarProfile(user);
 
     // Toggle navigation panels
     document.getElementById("student-nav").classList.remove("hidden");
@@ -592,18 +608,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     currentUser.role = 'admin'; // Ensure the role is explicitly 'admin' for navigation toggles
     localStorage.setItem("peerlink_session_user", currentUser.id);
 
-    const sideAvatarElAdmin = document.getElementById('side-avatar');
-    if (sideAvatarElAdmin) {
-      if (currentUser.avatar && currentUser.avatar.startsWith('data:image')) {
-        sideAvatarElAdmin.innerHTML = `<img src="${currentUser.avatar}" class="w-10 h-10 object-cover rounded-full" alt="avatar" />`;
-      } else {
-        sideAvatarElAdmin.innerHTML = currentUser.avatar || '🛡️';
-      }
-    }
-    document.getElementById('side-username').textContent = currentUser.name || 'System Administrator';
-    document.getElementById('side-program').textContent = (currentUser.gradeLevel || currentUser.yearSection) && (currentUser.schoolName || currentUser.program) 
-      ? `${currentUser.gradeLevel || currentUser.yearSection} • ${currentUser.schoolName || currentUser.program}` 
-      : 'System Overseer';
+    updateSidebarProfile(currentUser);
 
     // Toggle navigation panels
     document.getElementById("student-nav").classList.add("hidden");
@@ -726,6 +731,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (activeSystemView === 'dashboard') renderDashboardPane();
         // Refresh schedule view on this device if another device saved a new schedule
         if (myDataChanged && activeSystemView === 'schedule') showSystemView('schedule');
+        // Always keep sidebar profile in sync with the latest server data
+        if (myDataChanged) updateSidebarProfile(currentUser);
         
         // Also refresh the view profile modal if open to show the latest match/profile details
         const modal = document.getElementById("partner-profile-modal");
@@ -5352,17 +5359,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (!res || !res.user) throw new Error('No user returned from server.');
       currentUser = res.user;
 
-      // Update sidebar avatar
-      const sideAvatar = document.getElementById('side-avatar');
-      if (sideAvatar) {
-        if (currentUser.avatar && currentUser.avatar.startsWith('data:image')) {
-          sideAvatar.innerHTML = `<img src="${currentUser.avatar}" class="w-10 h-10 object-cover rounded-full" alt="avatar" />`;
-        } else {
-          sideAvatar.innerHTML = currentUser.avatar || '👤';
-        }
-      }
-      document.getElementById('side-username').textContent  = currentUser.name;
-      document.getElementById('side-program').textContent   = `${currentUser.gradeLevel || currentUser.yearSection || ''} • ${currentUser.schoolName || currentUser.program || ''}`;
+      // Refresh sidebar to reflect updated name / avatar / school
+      updateSidebarProfile(currentUser);
 
       db.addLog('user', `${currentUser.name} updated profile details.`);
       showToast('Profile updated successfully! ✨', 'success');
