@@ -436,8 +436,58 @@ const db = {
     }
   },
 
-  // --- Write-Through Sync Methods (updates cache + LocalStorage + pushes to Server) ---
-  
+  // saveOneUser: always sends a PUT to the server for a single user — no diff check, guaranteed write.
+  // Use this from saveUserSchedule, saveUserProfile, saveUserSkills to prevent the save from being
+  // silently skipped by a stale diff check caused by shared object references or async polling.
+  saveOneUser: async (userObj) => {
+    if (!userObj || !userObj.id || userObj.id === 'admin') return;
+
+    const u = JSON.parse(JSON.stringify(userObj)); // defensive clone
+
+    if (isOffline) {
+      const idx = cache.users.findIndex(cu => cu.id === u.id);
+      if (idx !== -1) cache.users[idx] = u;
+      else cache.users.push(u);
+      localStorage.setItem("peerlink_users", JSON.stringify(cache.users));
+      return { success: true, user: u };
+    }
+
+    const res = await apiFetch(`/users/${u.id}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        name:             u.name,
+        bio:              u.bio,
+        avatar:           u.avatar,
+        birthday:         u.birthday,
+        address:          u.address,
+        contactInfo:      u.contactInfo,
+        schoolName:       u.schoolName,
+        gradeLevel:       u.gradeLevel,
+        section:          u.section,
+        track:            u.track,
+        strand:           u.strand,
+        subjectsNeedHelp: u.subjectsNeedHelp,
+        subjectsCanHelp:  u.subjectsCanHelp,
+        studySchedule:    u.studySchedule,
+        // Legacy aliases for fallback
+        program:          u.schoolName    || u.program,
+        yearSection:      u.gradeLevel    || u.yearSection,
+        courses:          u.subjectsNeedHelp || u.courses,
+        skills:           u.subjectsCanHelp  || u.skills,
+        schedule:         u.studySchedule  || u.schedule
+        // Do NOT pass password here - use db.changePassword instead
+      })
+    });
+
+    if (res && res.user) {
+      const liveIdx = cache.users.findIndex(cu => cu.id === u.id);
+      if (liveIdx !== -1) cache.users[liveIdx] = res.user;
+      localStorage.setItem("peerlink_users", JSON.stringify(cache.users));
+      window.lastServerWriteTime = Date.now();
+    }
+    return res;
+  },
+
   saveUsers: async (users) => {
     // Clone the users array defensively so concurrent polling/mutations don't affect the save payload
     const clonedUsers = JSON.parse(JSON.stringify(users));

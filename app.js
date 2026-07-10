@@ -1981,33 +1981,32 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   window.saveUserSchedule = async function() {
-    const users = db.getUsers();
-    const index = users.findIndex(u => u.id === currentUser.id);
-    if (index !== -1) {
-      currentUser.studySchedule = currentUser.schedule;
-      users[index].schedule = currentUser.schedule;
-      users[index].studySchedule = currentUser.studySchedule;
+    // Ensure studySchedule is in sync with schedule before saving
+    currentUser.studySchedule = currentUser.schedule;
 
-      showToast('Saving schedule... ⏳', 'info');
-      window.isSavingUser = true;
-      try {
-        await db.saveUsers(users);
+    showToast('Saving schedule... ⏳', 'info');
+    window.isSavingUser = true;
+    try {
+      // Use saveOneUser — always sends PUT, no diff-check that could silently skip the write
+      const res = await db.saveOneUser(currentUser);
+      if (!res || !res.user) throw new Error('No user returned from server.');
 
-        const freshUser = db.getUsers().find(u => u.id === currentUser.id);
-        if (freshUser) currentUser = freshUser;
+      // Update currentUser and cache with the confirmed server response
+      currentUser = res.user;
+      const liveIdx = db.getUsers().findIndex(u => u.id === currentUser.id);
+      if (liveIdx !== -1) db.getUsers()[liveIdx] = currentUser;
 
-        db.addLog("user", `${currentUser.name} updated schedule availability.`);
-        showToast('Schedule saved successfully! ✅', 'success');
-        showSystemView("schedule"); // Refresh availability view
+      db.addLog("user", `${currentUser.name} updated schedule availability.`);
+      showToast('Schedule saved successfully! ✅', 'success');
+      showSystemView("schedule"); // Refresh availability view
 
-        // Recalculate matches now that schedule changed
-        if (typeof renderMatchesPane === 'function') renderMatchesPane();
-        if (typeof renderDashboardPane === 'function') renderDashboardPane();
-      } catch (err) {
-        showToast('Failed to save schedule. Please check your connection and try again.', 'error');
-      } finally {
-        window.isSavingUser = false;
-      }
+      // Recalculate matches now that schedule changed
+      if (typeof renderMatchesPane === 'function') renderMatchesPane();
+      if (typeof renderDashboardPane === 'function') renderDashboardPane();
+    } catch (err) {
+      showToast('Failed to save schedule. Please check your connection and try again.', 'error');
+    } finally {
+      window.isSavingUser = false;
     }
   };
 
@@ -5243,74 +5242,70 @@ document.addEventListener("DOMContentLoaded", async () => {
   };
 
   window.saveUserProfile = async function() {
-    const users = db.getUsers();
-    const index = users.findIndex(u => u.id === currentUser.id);
-    if (index !== -1) {
-      currentUser.name        = (document.getElementById('prof-name')?.value || currentUser.name).trim();
-      currentUser.schoolName  = (document.getElementById('prof-school-name')?.value || currentUser.schoolName || '').trim();
-      currentUser.gradeLevel  = document.getElementById('prof-grade-level')?.value || currentUser.gradeLevel || '';
-      currentUser.section     = (document.getElementById('prof-section')?.value || currentUser.section || '').trim();
-      currentUser.track       = document.getElementById('prof-track')?.value || currentUser.track || null;
-      currentUser.strand      = document.getElementById('prof-strand')?.value || currentUser.strand || null;
+    currentUser.name        = (document.getElementById('prof-name')?.value || currentUser.name).trim();
+    currentUser.schoolName  = (document.getElementById('prof-school-name')?.value || currentUser.schoolName || '').trim();
+    currentUser.gradeLevel  = document.getElementById('prof-grade-level')?.value || currentUser.gradeLevel || '';
+    currentUser.section     = (document.getElementById('prof-section')?.value || currentUser.section || '').trim();
+    currentUser.track       = document.getElementById('prof-track')?.value || currentUser.track || null;
+    currentUser.strand      = document.getElementById('prof-strand')?.value || currentUser.strand || null;
 
-      // Legacy compatibility mapping
-      currentUser.program     = currentUser.schoolName;
-      currentUser.yearSection = currentUser.gradeLevel;
+    // Legacy compatibility mapping
+    currentUser.program     = currentUser.schoolName;
+    currentUser.yearSection = currentUser.gradeLevel;
 
-      currentUser.bio         = (document.getElementById('prof-bio')?.value || '').trim();
-      currentUser.birthday    = document.getElementById('prof-birthday')?.value || currentUser.birthday || '';
-      currentUser.address     = (document.getElementById('prof-address')?.value || '').trim();
-      currentUser.contactInfo = (document.getElementById('prof-contact')?.value || '').trim();
-      const newAvatar = document.getElementById('prof-avatar')?.value || currentUser.avatar;
-      const isPhotoUpload = newAvatar && newAvatar.startsWith('data:image');
+    currentUser.bio         = (document.getElementById('prof-bio')?.value || '').trim();
+    currentUser.birthday    = document.getElementById('prof-birthday')?.value || currentUser.birthday || '';
+    currentUser.address     = (document.getElementById('prof-address')?.value || '').trim();
+    currentUser.contactInfo = (document.getElementById('prof-contact')?.value || '').trim();
+    const newAvatar = document.getElementById('prof-avatar')?.value || currentUser.avatar;
+    const isPhotoUpload = newAvatar && newAvatar.startsWith('data:image');
 
-      showToast('Saving profile... ⏳', 'info');
-      window.isSavingUser = true;
+    showToast('Saving profile... ⏳', 'info');
+    window.isSavingUser = true;
 
-      // If a photo was selected, upload it separately via dedicated endpoint
-      if (isPhotoUpload && newAvatar !== currentUser.avatar) {
-        try {
-          const res = await db.uploadAvatar(currentUser.id, newAvatar);
-          if (res && res.success) {
-            currentUser.avatar = newAvatar;
-          } else {
-            showToast(res.message || 'Failed to upload photo.', 'error');
-            window.isSavingUser = false;
-            return;
-          }
-        } catch(e) {
-          showToast('Failed to upload photo. Try a smaller image.', 'error');
+    // If a photo was selected, upload it separately via dedicated endpoint
+    if (isPhotoUpload && newAvatar !== currentUser.avatar) {
+      try {
+        const res = await db.uploadAvatar(currentUser.id, newAvatar);
+        if (res && res.success) {
+          currentUser.avatar = newAvatar;
+        } else {
+          showToast(res.message || 'Failed to upload photo.', 'error');
           window.isSavingUser = false;
           return;
         }
-      } else {
-        currentUser.avatar = newAvatar;
+      } catch(e) {
+        showToast('Failed to upload photo. Try a smaller image.', 'error');
+        window.isSavingUser = false;
+        return;
       }
+    } else {
+      currentUser.avatar = newAvatar;
+    }
 
-      users[index] = { ...users[index], ...currentUser };
-      try {
-        await db.saveUsers(users);
+    try {
+      const res = await db.saveOneUser(currentUser);
+      if (!res || !res.user) throw new Error('No user returned from server.');
+      currentUser = res.user;
 
-        const freshUser = db.getUsers().find(u => u.id === currentUser.id);
-        if (freshUser) currentUser = freshUser;
-
-        // Update sidebar avatar
-        const sideAvatar = document.getElementById('side-avatar');
-        if (sideAvatar) {
-          if (currentUser.avatar && currentUser.avatar.startsWith('data:image')) {
-            sideAvatar.innerHTML = `<img src="${currentUser.avatar}" class="w-10 h-10 object-cover rounded-full" alt="avatar" />`;
-          } else {
-            sideAvatar.innerHTML = currentUser.avatar || '👤';
-          }
+      // Update sidebar avatar
+      const sideAvatar = document.getElementById('side-avatar');
+      if (sideAvatar) {
+        if (currentUser.avatar && currentUser.avatar.startsWith('data:image')) {
+          sideAvatar.innerHTML = `<img src="${currentUser.avatar}" class="w-10 h-10 object-cover rounded-full" alt="avatar" />`;
+        } else {
+          sideAvatar.innerHTML = currentUser.avatar || '👤';
         }
-        document.getElementById('side-username').textContent  = currentUser.name;
-        document.getElementById('side-program').textContent   = `${currentUser.gradeLevel || currentUser.yearSection || ''} • ${currentUser.schoolName || currentUser.program || ''}`;
-
-        db.addLog('user', `${currentUser.name} updated profile details.`);
-        showToast('Profile updated successfully! ✨', 'success');
-      } catch (err) {
-        showToast('Failed to save profile. Please check your connection and try again.', 'error');
       }
+      document.getElementById('side-username').textContent  = currentUser.name;
+      document.getElementById('side-program').textContent   = `${currentUser.gradeLevel || currentUser.yearSection || ''} • ${currentUser.schoolName || currentUser.program || ''}`;
+
+      db.addLog('user', `${currentUser.name} updated profile details.`);
+      showToast('Profile updated successfully! ✨', 'success');
+    } catch (err) {
+      showToast('Failed to save profile. Please check your connection and try again.', 'error');
+    } finally {
+      window.isSavingUser = false;
     }
   };
 
@@ -5371,44 +5366,35 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   window.saveUserSkills = async function() {
-    const users = db.getUsers();
-    const index = users.findIndex(u => u.id === currentUser.id);
-    if (index !== -1) {
-      const have = [];
-      document.querySelectorAll("#edit-have-skills-grid input:checked").forEach(cb => have.push(cb.value));
+    const have = [];
+    document.querySelectorAll("#edit-have-skills-grid input:checked").forEach(cb => have.push(cb.value));
+    const want = [];
+    document.querySelectorAll("#edit-want-skills-grid input:checked").forEach(cb => want.push(cb.value));
 
-      const want = [];
-      document.querySelectorAll("#edit-want-skills-grid input:checked").forEach(cb => want.push(cb.value));
+    currentUser.skills = { have, want };
+    currentUser.subjectsCanHelp  = have;
+    currentUser.subjectsNeedHelp = want;
+    currentUser.courses          = want;
 
-      currentUser.skills = { have, want };
-      currentUser.subjectsCanHelp = have;
-      currentUser.subjectsNeedHelp = want;
-      currentUser.courses = want;
+    showToast('Saving skills... ⏳', 'info');
+    window.isSavingUser = true;
+    try {
+      // Use saveOneUser — always sends PUT, no diff-check that could silently skip the write
+      const res = await db.saveOneUser(currentUser);
+      if (!res || !res.user) throw new Error('No user returned from server.');
 
-      users[index].skills = currentUser.skills;
-      users[index].subjectsCanHelp = currentUser.subjectsCanHelp;
-      users[index].subjectsNeedHelp = currentUser.subjectsNeedHelp;
-      users[index].courses = currentUser.courses;
+      currentUser = res.user;
 
-      showToast('Saving skills... ⏳', 'info');
-      window.isSavingUser = true;
-      try {
-        await db.saveUsers(users);
+      db.addLog("user", `${currentUser.name} updated matching skill metrics.`);
+      showToast('Skills saved! Your matches will update. 🎯', 'success');
+      showSystemView("dashboard");
 
-        const freshUser = db.getUsers().find(u => u.id === currentUser.id);
-        if (freshUser) currentUser = freshUser;
-
-        db.addLog("user", `${currentUser.name} updated matching skill metrics.`);
-        showToast('Skills saved! Your matches will update. 🎯', 'success');
-        showSystemView("dashboard");
-
-        // Recalculate matches now that subjects changed
-        if (typeof renderMatchesPane === 'function') renderMatchesPane();
-      } catch (err) {
-        showToast('Failed to save skills. Please check your connection and try again.', 'error');
-      } finally {
-        window.isSavingUser = false;
-      }
+      // Recalculate matches now that subjects changed
+      if (typeof renderMatchesPane === 'function') renderMatchesPane();
+    } catch (err) {
+      showToast('Failed to save skills. Please check your connection and try again.', 'error');
+    } finally {
+      window.isSavingUser = false;
     }
   };
 
