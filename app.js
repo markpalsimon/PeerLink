@@ -674,7 +674,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   window.onlineUserIds = window.onlineUserIds || new Set();
 
   async function pollUpdates() {
-    if (!currentUser) return;
+    if (!currentUser || window.isSavingUser) return;
     try {
       const [users, connections, meetings] = await Promise.all([
         apiFetch('/users'),
@@ -1982,6 +1982,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       users[index].studySchedule = currentUser.studySchedule;
 
       showToast('Saving schedule... ⏳', 'info');
+      window.isSavingUser = true;
       try {
         await db.saveUsers(users);
 
@@ -1997,6 +1998,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (typeof renderDashboardPane === 'function') renderDashboardPane();
       } catch (err) {
         showToast('Failed to save schedule. Please check your connection and try again.', 'error');
+      } finally {
+        window.isSavingUser = false;
       }
     }
   };
@@ -5255,6 +5258,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const isPhotoUpload = newAvatar && newAvatar.startsWith('data:image');
 
       showToast('Saving profile... ⏳', 'info');
+      window.isSavingUser = true;
 
       // If a photo was selected, upload it separately via dedicated endpoint
       if (isPhotoUpload && newAvatar !== currentUser.avatar) {
@@ -5264,10 +5268,12 @@ document.addEventListener("DOMContentLoaded", async () => {
             currentUser.avatar = newAvatar;
           } else {
             showToast(res.message || 'Failed to upload photo.', 'error');
+            window.isSavingUser = false;
             return;
           }
         } catch(e) {
           showToast('Failed to upload photo. Try a smaller image.', 'error');
+          window.isSavingUser = false;
           return;
         }
       } else {
@@ -5378,6 +5384,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       users[index].courses = currentUser.courses;
 
       showToast('Saving skills... ⏳', 'info');
+      window.isSavingUser = true;
       try {
         await db.saveUsers(users);
 
@@ -5392,6 +5399,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (typeof renderMatchesPane === 'function') renderMatchesPane();
       } catch (err) {
         showToast('Failed to save skills. Please check your connection and try again.', 'error');
+      } finally {
+        window.isSavingUser = false;
       }
     }
   };

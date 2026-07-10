@@ -442,12 +442,15 @@ const db = {
     const oldUsersStr = localStorage.getItem("peerlink_users");
     const oldUsers = oldUsersStr ? JSON.parse(oldUsersStr) : [];
 
+    // Clone the users array defensively so concurrent polling/mutations don't affect the save payload
+    const clonedUsers = JSON.parse(JSON.stringify(users));
+
     cache.users = users;
     localStorage.setItem("peerlink_users", JSON.stringify(users));
     if (isOffline) return;
 
-    for (let i = 0; i < users.length; i++) {
-      const u = users[i];
+    for (let i = 0; i < clonedUsers.length; i++) {
+      const u = clonedUsers[i];
       if (u.id === 'admin') continue; // Never overwrite admin via saveUsers
 
       // Check if this specific user object has actually changed
@@ -457,9 +460,7 @@ const db = {
       }
 
       try {
-        // Quick check to see if user exists on backend
-        await apiFetch(`/users/${u.id}`);
-        // Exists -> Update details via PUT
+        // Exists -> Update details via PUT directly
         const res = await apiFetch(`/users/${u.id}`, {
           method: 'PUT',
           body: JSON.stringify({
@@ -488,8 +489,11 @@ const db = {
           })
         });
         if (res && res.user) {
-          cache.users[i] = res.user;
-          localStorage.setItem("peerlink_users", JSON.stringify(cache.users));
+          const liveIdx = cache.users.findIndex(usr => usr.id === u.id);
+          if (liveIdx !== -1) {
+            cache.users[liveIdx] = res.user;
+            localStorage.setItem("peerlink_users", JSON.stringify(cache.users));
+          }
         }
       } catch (err) {
         // Log sync failure and propagate the error so the UI can catch it and show error toasts
