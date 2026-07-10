@@ -684,9 +684,20 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       // Normalize passwords for comparison
       const normalizedUsers = users.map(u => ({ ...u, password: u.password || 'password123' }));
+      
       const cacheStr = JSON.stringify(cache.users);
       const incomingStr = JSON.stringify(normalizedUsers);
-      const hasChanges = cacheStr !== incomingStr;
+      const usersChanged = cacheStr !== incomingStr;
+
+      const cacheConnsStr = JSON.stringify(cache.connections);
+      const incomingConnsStr = JSON.stringify(connections);
+      const connsChanged = cacheConnsStr !== incomingConnsStr;
+
+      const cacheMeetsStr = JSON.stringify(cache.meetings);
+      const incomingMeetsStr = JSON.stringify(meetings);
+      const meetsChanged = cacheMeetsStr !== incomingMeetsStr;
+
+      const hasChanges = usersChanged || connsChanged || meetsChanged;
 
       db.updateCacheData(users, connections, meetings);
 
@@ -5270,8 +5281,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function renderSkillsPane() {
     const skills = db.getSkills() || [];
-    const userHave = currentUser.skills?.have || [];
-    const userWant = currentUser.skills?.want || [];
+    // Prefer modern fields (subjectsCanHelp / subjectsNeedHelp) with legacy fallback
+    const userHave = (currentUser.subjectsCanHelp?.length ? currentUser.subjectsCanHelp : null)
+                  || currentUser.skills?.have
+                  || [];
+    const userWant = (currentUser.subjectsNeedHelp?.length ? currentUser.subjectsNeedHelp : null)
+                  || currentUser.skills?.want
+                  || [];
 
     sysPanes.skills.innerHTML = `
       <div class="bg-white border rounded-2xl p-6 shadow-sm space-y-6">
