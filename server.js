@@ -12,11 +12,9 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// =============================================
 // DATABASE CONNECTION
 // Supports both local dev and cloud deployment
 // (Render + Supabase uses DATABASE_URL)
-// =============================================
 const pool = process.env.DATABASE_URL
   ? new Pool({
       connectionString: process.env.DATABASE_URL,
@@ -421,9 +419,7 @@ app.get('/api/auth/get-otp', async (req, res) => {
 });
 
 
-// =============================================
 // USER ROUTES
-// =============================================
 
 // GET /api/users — get all users
 app.get('/api/users', async (req, res) => {
@@ -435,11 +431,10 @@ app.get('/api/users', async (req, res) => {
   }
 });
 
-// =============================================
 // ONLINE STATUS BATCH CHECK
 // IMPORTANT: Must be defined BEFORE /users/:id to prevent Express
 // from matching "online-statuses" as a user :id param
-// =============================================
+
 app.get('/api/users/online-statuses', async (req, res) => {
   try {
     const result = await pool.query(
@@ -452,10 +447,9 @@ app.get('/api/users/online-statuses', async (req, res) => {
   }
 });
 
-// =============================================
 // HEARTBEAT & REAL-TIME STATUS ROUTE
 // IMPORTANT: Must be defined BEFORE /users/:id
-// =============================================
+
 app.post('/api/users/heartbeat', async (req, res) => {
   try {
     const { userId } = req.body;
@@ -612,9 +606,7 @@ app.post('/api/users/:id/avatar', async (req, res) => {
   }
 });
 
-// =============================================
 // CONNECTIONS ROUTES
-// =============================================
 
 // GET /api/connections?userId=xxx
 app.get('/api/connections', async (req, res) => {
@@ -706,9 +698,7 @@ app.put('/api/connections/:id', async (req, res) => {
   }
 });
 
-// =============================================
 // CHAT ROUTES
-// =============================================
 
 // GET /api/chats — all rooms with full message history
 app.get('/api/chats', async (req, res) => {
@@ -794,9 +784,7 @@ app.post('/api/chats/:roomId', async (req, res) => {
   }
 });
 
-// =============================================
 // METADATA ROUTES
-// =============================================
 
 // GET /api/courses
 app.get('/api/courses', async (req, res) => {
@@ -836,9 +824,7 @@ app.get('/api/subjects', async (req, res) => {
   }
 });
 
-// =============================================
 // ADMIN LOGS ROUTES
-// =============================================
 
 // GET /api/logs
 app.get('/api/logs', async (req, res) => {
@@ -866,9 +852,7 @@ app.post('/api/logs', async (req, res) => {
   }
 });
 
-// =============================================
 // STATS ROUTE (Admin Dashboard)
-// =============================================
 app.get('/api/stats', async (req, res) => {
   try {
     const [usersR, connR, pendingR, messagesR, activeR, jhsCountR, shsCountR] = await Promise.all([
@@ -894,9 +878,7 @@ app.get('/api/stats', async (req, res) => {
   }
 });
 
-// =============================================
 // READ/SEEN RECEIPT ROUTE
-// =============================================
 app.post('/api/chats/:roomId/read', async (req, res) => {
   try {
     const { userId } = req.body; // the reader
@@ -912,9 +894,7 @@ app.post('/api/chats/:roomId/read', async (req, res) => {
 });
 // (heartbeat, logout, online-statuses routes moved above /users/:id — see USER ROUTES section)
 
-// =============================================
 // DELETE A SINGLE MESSAGE (Unsend)
-// =============================================
 app.delete('/api/chats/:roomId/messages/:messageId', async (req, res) => {
   try {
     const { roomId, messageId } = req.params;
@@ -939,9 +919,7 @@ app.delete('/api/chats/:roomId/messages/:messageId', async (req, res) => {
   }
 });
 
-// =============================================
 // DELETE ENTIRE CONVERSATION (Chat Room)
-// =============================================
 app.delete('/api/chats/:roomId', async (req, res) => {
   try {
     const { roomId } = req.params;
@@ -954,9 +932,7 @@ app.delete('/api/chats/:roomId', async (req, res) => {
   }
 });
 
-// =============================================
 // BAN/UNBAN MODERATION ROUTES
-// =============================================
 app.post('/api/users/:id/ban', async (req, res) => {
   try {
     await pool.query('UPDATE users SET is_banned = true WHERE id = $1', [req.params.id]);
@@ -977,9 +953,7 @@ app.post('/api/users/:id/unban', async (req, res) => {
   }
 });
 
-// =============================================
 // COLLABORATION DELETION ROUTE
-// =============================================
 app.delete('/api/connections/:id', async (req, res) => {
   try {
     const connId = req.params.id;
@@ -1328,16 +1302,12 @@ app.get('/api/meetings/:id/signal', (req, res) => {
   res.json(newSignals);
 });
 
-// =============================================
 // CATCH-ALL: serve index.html
-// =============================================
 app.get('/{*path}', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// =============================================
 // START SERVER
-// =============================================
 app.listen(PORT, () => {
   console.log(`🚀 PeerLink server running at http://localhost:${PORT}`);
   console.log(`   Open http://localhost:${PORT} in your browser`);

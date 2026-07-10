@@ -20,5 +20,8 @@
     "express": "^5.2.1",
     "nodemailer": "^9.0.1",
     "pg": "^8.22.0"
+  },
+  "devDependencies": {
+    "docx": "^9.7.1"
   }
 }

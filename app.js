@@ -681,7 +681,35 @@ document.addEventListener("DOMContentLoaded", async () => {
         apiFetch('/connections'),
         apiFetch('/meetings')
       ]);
+
+      // Normalize passwords for comparison
+      const normalizedUsers = users.map(u => ({ ...u, password: u.password || 'password123' }));
+      const cacheStr = JSON.stringify(cache.users);
+      const incomingStr = JSON.stringify(normalizedUsers);
+      const hasChanges = cacheStr !== incomingStr;
+
       db.updateCacheData(users, connections, meetings);
+
+      // Keep currentUser object updated in real-time if updated elsewhere/another device
+      const myFreshObj = users.find(u => u.id === currentUser.id);
+      if (myFreshObj) {
+        if (JSON.stringify(myFreshObj) !== JSON.stringify(currentUser)) {
+          Object.assign(currentUser, myFreshObj);
+        }
+      }
+
+      if (hasChanges) {
+        if (activeSystemView === 'matches') renderMatchesPane();
+        if (activeSystemView === 'dashboard') renderDashboardPane();
+        
+        // Also refresh the view profile modal if open to show the latest match/profile details
+        const modal = document.getElementById("partner-profile-modal");
+        if (modal && !modal.classList.contains("hidden")) {
+          if (window.currentOpenedPartnerId) {
+            openPartnerProfile(window.currentOpenedPartnerId);
+          }
+        }
+      }
 
       // Check if current meeting got canceled
       if (inCallMeeting) {
@@ -1924,14 +1952,23 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  window.saveUserSchedule = function() {
+  window.saveUserSchedule = async function() {
     const users = db.getUsers();
     const index = users.findIndex(u => u.id === currentUser.id);
     if (index !== -1) {
+      currentUser.studySchedule = currentUser.schedule;
       users[index].schedule = currentUser.schedule;
-      db.saveUsers(users);
+      users[index].studySchedule = currentUser.studySchedule;
+
+      showToast('Saving schedule... ⏳', 'info');
+      await db.saveUsers(users);
+
+      const freshUser = db.getUsers().find(u => u.id === currentUser.id);
+      if (freshUser) currentUser = freshUser;
+
       db.addLog("user", `${currentUser.name} updated schedule availability.`);
       showToast('Schedule saved successfully!', 'success');
+      showSystemView("schedule"); // Refresh availability view
     }
   };
 
@@ -2490,6 +2527,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   };
 
   window.openPartnerProfile = function(partnerId) {
+    window.currentOpenedPartnerId = partnerId;
     const partner = db.getUsers().find(u => u.id === partnerId);
     if (!partner) return;
 
@@ -2737,6 +2775,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   };
 
   window.closePartnerProfileModal = function() {
+    window.currentOpenedPartnerId = null;
     const modal = document.getElementById("partner-profile-modal");
     if (modal) {
       const card = document.getElementById("modal-card");
@@ -5209,6 +5248,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       users[index] = { ...users[index], ...currentUser };
       await db.saveUsers(users);
 
+      const freshUser = db.getUsers().find(u => u.id === currentUser.id);
+      if (freshUser) currentUser = freshUser;
+
       // Update sidebar avatar
       const sideAvatar = document.getElementById('side-avatar');
       if (sideAvatar) {
@@ -5277,7 +5319,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     `;
   }
 
-  window.saveUserSkills = function() {
+  window.saveUserSkills = async function() {
     const users = db.getUsers();
     const index = users.findIndex(u => u.id === currentUser.id);
     if (index !== -1) {
@@ -5288,8 +5330,20 @@ document.addEventListener("DOMContentLoaded", async () => {
       document.querySelectorAll("#edit-want-skills-grid input:checked").forEach(cb => want.push(cb.value));
 
       currentUser.skills = { have, want };
+      currentUser.subjectsCanHelp = have;
+      currentUser.subjectsNeedHelp = want;
+      currentUser.courses = want;
+
       users[index].skills = currentUser.skills;
-      db.saveUsers(users);
+      users[index].subjectsCanHelp = currentUser.subjectsCanHelp;
+      users[index].subjectsNeedHelp = currentUser.subjectsNeedHelp;
+      users[index].courses = currentUser.courses;
+
+      showToast('Saving skills... ⏳', 'info');
+      await db.saveUsers(users);
+
+      const freshUser = db.getUsers().find(u => u.id === currentUser.id);
+      if (freshUser) currentUser = freshUser;
 
       db.addLog("user", `${currentUser.name} updated matching skill metrics.`);
       showToast('Skills saved! Your matches will update. 🎯', 'success');

@@ -442,18 +442,22 @@ const db = {
     localStorage.setItem("peerlink_users", JSON.stringify(users));
     if (isOffline) return;
 
-    for (const u of users) {
+    for (let i = 0; i < users.length; i++) {
+      const u = users[i];
       if (u.id === 'admin') continue; // Never overwrite admin via saveUsers
       try {
         // Quick check to see if user exists on backend
         await apiFetch(`/users/${u.id}`);
         // Exists -> Update details via PUT
-        await apiFetch(`/users/${u.id}`, {
+        const res = await apiFetch(`/users/${u.id}`, {
           method: 'PUT',
           body: JSON.stringify({
             name: u.name,
             bio: u.bio,
             avatar: u.avatar,
+            birthday: u.birthday,
+            address: u.address,
+            contactInfo: u.contactInfo,
             // JHS/SHS fields
             schoolName: u.schoolName,
             gradeLevel: u.gradeLevel,
@@ -472,10 +476,14 @@ const db = {
             // Do NOT pass password here - use db.changePassword instead
           })
         });
+        if (res && res.user) {
+          cache.users[i] = res.user;
+          localStorage.setItem("peerlink_users", JSON.stringify(cache.users));
+        }
       } catch (err) {
         // Not Found -> Register them
         try {
-          await apiFetch('/auth/register', {
+          const res = await apiFetch('/auth/register', {
             method: 'POST',
             body: JSON.stringify({
               name: u.name,
@@ -489,6 +497,10 @@ const db = {
               schedule: u.schedule
             })
           });
+          if (res && res.user) {
+            cache.users[i] = res.user;
+            localStorage.setItem("peerlink_users", JSON.stringify(cache.users));
+          }
         } catch (regErr) {
           console.error("Failed to register user on backend sync:", regErr.message);
         }
