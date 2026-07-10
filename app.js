@@ -710,15 +710,22 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       // Keep currentUser object updated in real-time if updated elsewhere/another device
       const myFreshObj = users.find(u => u.id === currentUser.id);
+      let myDataChanged = false;
       if (myFreshObj) {
         if (JSON.stringify(myFreshObj) !== JSON.stringify(currentUser)) {
           Object.assign(currentUser, myFreshObj);
+          // Keep both schedule field aliases in sync across devices
+          currentUser.schedule      = myFreshObj.studySchedule || myFreshObj.schedule || currentUser.schedule;
+          currentUser.studySchedule = currentUser.schedule;
+          myDataChanged = true;
         }
       }
 
       if (hasChanges) {
         if (activeSystemView === 'matches') renderMatchesPane();
         if (activeSystemView === 'dashboard') renderDashboardPane();
+        // Refresh schedule view on this device if another device saved a new schedule
+        if (myDataChanged && activeSystemView === 'schedule') showSystemView('schedule');
         
         // Also refresh the view profile modal if open to show the latest match/profile details
         const modal = document.getElementById("partner-profile-modal");
@@ -1987,6 +1994,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     showToast('Saving schedule... ⏳', 'info');
     window.isSavingUser = true;
+    // Safety net: always release the save lock after 15s in case of network hang
+    const saveGuardTimer = setTimeout(() => { window.isSavingUser = false; }, 15000);
     try {
       // Use saveOneUser — always sends PUT, no diff-check that could silently skip the write
       const res = await db.saveOneUser(currentUser);
@@ -1994,8 +2003,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       // Update currentUser and cache with the confirmed server response
       currentUser = res.user;
+      // Ensure both schedule aliases are in sync
+      currentUser.schedule      = currentUser.studySchedule || currentUser.schedule;
+      currentUser.studySchedule = currentUser.schedule;
       const liveIdx = db.getUsers().findIndex(u => u.id === currentUser.id);
       if (liveIdx !== -1) db.getUsers()[liveIdx] = currentUser;
+      // Update localStorage so other tabs on same device see the new schedule immediately
+      localStorage.setItem('peerlink_users', JSON.stringify(db.getUsers()));
 
       db.addLog("user", `${currentUser.name} updated schedule availability.`);
       showToast('Schedule saved successfully! ✅', 'success');
@@ -2007,6 +2021,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     } catch (err) {
       showToast('Failed to save schedule. Please check your connection and try again.', 'error');
     } finally {
+      clearTimeout(saveGuardTimer);
       window.isSavingUser = false;
     }
   };
@@ -3595,10 +3610,16 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     };
 
+    // Host creates the initial offer and stores it locally so it can be re-sent if needed
+    let hostOfferSdp = null;
+    // Track the last known participant count so the host knows when a new guest has joined
+    let lastKnownActiveCount = 1;
+
     if (isHost) {
       try {
         const offer = await peerConnection.createOffer();
         await peerConnection.setLocalDescription(offer);
+        hostOfferSdp = offer.sdp; // store for re-sending when a new guest joins late
         await db.sendSignal(meetObj.id, currentUser.id, {
           type: 'offer',
           sdp: offer.sdp
@@ -3622,6 +3643,22 @@ document.addEventListener("DOMContentLoaded", async () => {
             const currentMeet = freshMeetings.find(m => String(m.id) === String(meetObj.id)) || meetObj;
             const approved = currentMeet.approved_participants || [];
             const usersList = db.getUsers() || [];
+
+            // Detect when a new guest joins: active_count increases
+            // Re-send the offer so the guest reliably gets it regardless of timing
+            const newActiveCount = currentMeet.active_count || approved.length;
+            if (newActiveCount > lastKnownActiveCount && hostOfferSdp) {
+              lastKnownActiveCount = newActiveCount;
+              console.log('[WebRTC] New participant detected, re-sending offer to ensure connection...');
+              try {
+                await db.sendSignal(meetObj.id, currentUser.id, {
+                  type: 'offer',
+                  sdp: hostOfferSdp
+                });
+              } catch (e) {
+                console.warn('[WebRTC] Failed to re-send offer:', e);
+              }
+            }
             
             listDiv.innerHTML = approved.filter(id => String(id) !== String(currentUser.id)).map(id => {
               const uObj = usersList.find(u => String(u.id) === String(id));
@@ -3681,6 +3718,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         if (type === 'offer') {
           try {
+            // Reset connection state if we already have a remote description (re-offer scenario)
+            if (peerConnection.signalingState !== 'stable' && peerConnection.signalingState !== 'have-local-offer') {
+              await peerConnection.setRemoteDescription(new RTCSessionDescription({ type: 'rollback' })).catch(() => {});
+            }
             await peerConnection.setRemoteDescription(new RTCSessionDescription({ type, sdp }));
             const answer = await peerConnection.createAnswer();
             await peerConnection.setLocalDescription(answer);
@@ -3693,13 +3734,17 @@ document.addEventListener("DOMContentLoaded", async () => {
           }
         } else if (type === 'answer') {
           try {
-            await peerConnection.setRemoteDescription(new RTCSessionDescription({ type, sdp }));
+            if (peerConnection.signalingState === 'have-local-offer') {
+              await peerConnection.setRemoteDescription(new RTCSessionDescription({ type, sdp }));
+            }
           } catch (err) {
             console.error("Error setting WebRTC remote answer:", err);
           }
         } else if (type === 'candidate') {
           try {
-            await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+            if (peerConnection.remoteDescription) {
+              await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+            }
           } catch (err) {
             console.error("Error adding ICE candidate:", err);
           }
@@ -5279,6 +5324,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     showToast('Saving profile... ⏳', 'info');
     window.isSavingUser = true;
+    // Safety net: always release the save lock after 15s in case of network hang
+    const saveGuardTimer = setTimeout(() => { window.isSavingUser = false; }, 15000);
 
     // If a photo was selected, upload it separately via dedicated endpoint
     if (isPhotoUpload && newAvatar !== currentUser.avatar) {
@@ -5322,6 +5369,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     } catch (err) {
       showToast('Failed to save profile. Please check your connection and try again.', 'error');
     } finally {
+      clearTimeout(saveGuardTimer);
       window.isSavingUser = false;
     }
   };
@@ -5395,6 +5443,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     showToast('Saving skills... ⏳', 'info');
     window.isSavingUser = true;
+    // Safety net: always release the save lock after 15s in case of network hang
+    const saveGuardTimer = setTimeout(() => { window.isSavingUser = false; }, 15000);
     try {
       // Use saveOneUser — always sends PUT, no diff-check that could silently skip the write
       const res = await db.saveOneUser(currentUser);
@@ -5411,6 +5461,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     } catch (err) {
       showToast('Failed to save skills. Please check your connection and try again.', 'error');
     } finally {
+      clearTimeout(saveGuardTimer);
       window.isSavingUser = false;
     }
   };
