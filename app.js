@@ -675,12 +675,19 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   async function pollUpdates() {
     if (!currentUser || window.isSavingUser) return;
+    const pollInitiatedTime = Date.now();
     try {
       const [users, connections, meetings] = await Promise.all([
         apiFetch('/users'),
         apiFetch('/connections'),
         apiFetch('/meetings')
       ]);
+
+      // If a successful save occurred while this poll was in flight, discard the stale response
+      if (window.lastServerWriteTime && pollInitiatedTime < window.lastServerWriteTime) {
+        console.warn("Discarding poll response: it was initiated before the last successful save completed.");
+        return;
+      }
 
       // Normalize passwords for comparison
       const normalizedUsers = users.map(u => ({ ...u, password: u.password || 'password123' }));

@@ -3,6 +3,7 @@
 // Exposes synchronous read cache so app.js runs smoothly without crashes.
 
 const API_BASE = window.location.origin + '/api';
+window.lastServerWriteTime = 0;
 
 // =============================================
 // GLOBAL METADATA CONSTANTS
@@ -497,6 +498,7 @@ const db = {
           }
           // Update localStorage to reflect the newly confirmed user
           localStorage.setItem("peerlink_users", JSON.stringify(cache.users));
+          window.lastServerWriteTime = Date.now();
         }
       } catch (err) {
         // Log sync failure and propagate the error so the UI can catch it and show error toasts
@@ -523,6 +525,7 @@ const db = {
       const idx = cache.users.findIndex(u => u.id === userId);
       if (idx !== -1) { cache.users[idx] = res.user; }
       localStorage.setItem('peerlink_users', JSON.stringify(cache.users));
+      window.lastServerWriteTime = Date.now();
     }
     return res;
   },
