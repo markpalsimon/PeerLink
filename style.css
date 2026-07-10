@@ -625,6 +625,12 @@ html.dark tr:hover {
 @media (max-width: 1023px) {
   .system-active #mobile-bottom-nav {
     display: block;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  
+  /* Ensure main view container is padded enough to clear the mobile bottom nav + safe area */
+  .system-active main > div.pb-20 {
+    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px)) !important;
   }
 }
 

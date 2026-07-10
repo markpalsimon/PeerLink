@@ -2970,19 +2970,21 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
 
         return `
-          <div class="flex items-center justify-between p-4 border rounded-xl hover:border-indigo-200 transition-colors bg-white">
-            <div class="flex items-center gap-3">
-              <span class="text-2xl">${isAudio ? '📞' : '🎥'}</span>
-              <div>
-                <h4 class="text-sm font-semibold text-slate-800">${m.topic}</h4>
-                <p class="text-xs text-slate-500">${m.meeting_date} • ${m.start_time} - ${m.end_time} with ${p ? p.name : (hostObj ? hostObj.name : 'Study Buddy')}</p>
-                <div class="flex items-center gap-2 mt-1">
-                  ${m.is_public ? `<span class="bg-indigo-100 text-brand-purple text-[9px] px-1.5 py-0.5 rounded font-bold">Public (${m.active_count || 0}/${m.max_participants})</span>` : `<span class="bg-slate-100 text-slate-600 text-[9px] px-1.5 py-0.5 rounded font-bold">Private (${m.active_count || 0}/${m.max_participants})</span>`}
-                  ${m.notes ? `<span class="text-[10px] text-slate-400 italic">Note: "${m.notes}"</span>` : ''}
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 border rounded-xl hover:border-indigo-200 transition-colors bg-white">
+            <div class="flex items-start sm:items-center gap-3">
+              <span class="text-2xl shrink-0 mt-0.5 sm:mt-0">${isAudio ? '📞' : '🎥'}</span>
+              <div class="min-w-0">
+                <h4 class="text-sm font-semibold text-slate-800 truncate">${m.topic}</h4>
+                <p class="text-xs text-slate-500 mt-0.5">${m.meeting_date} • ${m.start_time} - ${m.end_time} with ${p ? p.name : (hostObj ? hostObj.name : 'Study Buddy')}</p>
+                <div class="flex flex-wrap items-center gap-2 mt-1">
+                  ${m.is_public ? `<span class="bg-indigo-100 text-brand-purple text-[9px] px-1.5 py-0.5 rounded font-bold shrink-0">Public (${m.active_count || 0}/${m.max_participants})</span>` : `<span class="bg-slate-100 text-slate-600 text-[9px] px-1.5 py-0.5 rounded font-bold shrink-0">Private (${m.active_count || 0}/${m.max_participants})</span>`}
+                  ${m.notes ? `<span class="text-[10px] text-slate-400 italic truncate max-w-[200px]">Note: "${m.notes}"</span>` : ''}
                 </div>
               </div>
             </div>
-            ${buttonHTML}
+            <div class="flex sm:justify-end shrink-0">
+              ${buttonHTML}
+            </div>
           </div>
         `;
       }).join('');
