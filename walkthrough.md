@@ -232,3 +232,19 @@ We created and successfully executed a local integration test script (`test_jhs_
 3.  **OTP Verification & Database Storage**: Successfully saved JHS student Rizal High School and SHS student Pasig City Science High School (proving type size fix!).
 4.  **Admin Stats Increment**: Verified JHS and SHS stats increased.
 5.  **Test Result**: `✅ INTEGRATION TEST PASSED SUCCESSFULLY!`
+
+---
+
+### 17. 📞 Direct Call Connection & Duplicate Notification Overlay Fixes
+
+**Problems**:
+1. When initiating a direct call from the Messages panel, double event bindings (`click` + `touchend`) on the call buttons caused the caller to create two separate meeting sessions in rapid succession.
+2. The guest joined one session while the host was in the other, preventing a WebRTC connection.
+3. The guest received multiple incoming call notifications (one for each session created).
+4. The guest accepting the call did not update the meeting status on the server, keeping it in `pending` status, which caused subsequent page polls to trigger the incoming call notification overlay again.
+
+**Fixes Applied**:
+*   **Removed Redundant Touch Listeners**: Cleaned up the `touchend` event handlers from chat buttons (send, upload, voice, video, schedule, back) in `renderMessagesPane()`. This stops duplicate event dispatching on iOS Safari and other touch environments.
+*   **Debounced Call Initiation**: Added a 3-second `window.isInitiatingCall` debounce guard on `startVoiceCall` and `startVideoCall` to block accidental double-clicks or double-taps from creating duplicate meetings.
+*   **Meeting Status Acceptance Sync**: Updated the guest's `acceptCall` function to call `db.acceptInvitation()` on the server *before* entering `joinVideoCall`. This updates the meeting status to `accepted` and registers the guest in `approved_participants` in the PostgreSQL database.
+*   **Pending Calls Only filtering**: Added a status filter check (`m.status === 'pending'`) in `pollUpdates()` when searching for incoming voice/video calls. This prevents already accepted call sessions from triggering the overlay again.
