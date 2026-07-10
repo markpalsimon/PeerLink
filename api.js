@@ -447,12 +447,16 @@ const db = {
       return;
     }
 
+    // Read old users from localStorage (which represents the last confirmed server/offline state)
+    const oldUsersStr = localStorage.getItem("peerlink_users");
+    const oldUsers = oldUsersStr ? JSON.parse(oldUsersStr) : [];
+
     for (let i = 0; i < clonedUsers.length; i++) {
       const u = clonedUsers[i];
       if (u.id === 'admin') continue; // Never overwrite admin via saveUsers
 
-      // Diff check: compare against confirmed cache.users instead of a snapshot of localStorage
-      const oldU = cache.users.find(ou => ou.id === u.id);
+      // Diff check: compare against last confirmed oldUsers in localStorage
+      const oldU = oldUsers.find(ou => ou.id === u.id);
       if (oldU && JSON.stringify(oldU) === JSON.stringify(u)) {
         continue; // Skip PUT if unchanged
       }
@@ -490,8 +494,9 @@ const db = {
           const liveIdx = cache.users.findIndex(usr => usr.id === u.id);
           if (liveIdx !== -1) {
             cache.users[liveIdx] = res.user;
-            localStorage.setItem("peerlink_users", JSON.stringify(cache.users));
           }
+          // Update localStorage to reflect the newly confirmed user
+          localStorage.setItem("peerlink_users", JSON.stringify(cache.users));
         }
       } catch (err) {
         // Log sync failure and propagate the error so the UI can catch it and show error toasts
