@@ -438,6 +438,10 @@ const db = {
   // --- Write-Through Sync Methods (updates cache + LocalStorage + pushes to Server) ---
   
   saveUsers: async (users) => {
+    // Diff check: read previous cache from localStorage
+    const oldUsersStr = localStorage.getItem("peerlink_users");
+    const oldUsers = oldUsersStr ? JSON.parse(oldUsersStr) : [];
+
     cache.users = users;
     localStorage.setItem("peerlink_users", JSON.stringify(users));
     if (isOffline) return;
@@ -445,6 +449,13 @@ const db = {
     for (let i = 0; i < users.length; i++) {
       const u = users[i];
       if (u.id === 'admin') continue; // Never overwrite admin via saveUsers
+
+      // Check if this specific user object has actually changed
+      const oldU = oldUsers.find(ou => ou.id === u.id);
+      if (oldU && JSON.stringify(oldU) === JSON.stringify(u)) {
+        continue; // Skip PUT if unchanged
+      }
+
       try {
         // Quick check to see if user exists on backend
         await apiFetch(`/users/${u.id}`);
@@ -481,29 +492,9 @@ const db = {
           localStorage.setItem("peerlink_users", JSON.stringify(cache.users));
         }
       } catch (err) {
-        // Not Found -> Register them
-        try {
-          const res = await apiFetch('/auth/register', {
-            method: 'POST',
-            body: JSON.stringify({
-              name: u.name,
-              studentId: u.studentId,
-              email: u.email,
-              password: u.password || 'password123',
-              program: u.program,
-              yearLevel: u.yearSection.split(" ").slice(-1)[0] || '3rd Year',
-              courses: u.courses,
-              skills: u.skills,
-              schedule: u.schedule
-            })
-          });
-          if (res && res.user) {
-            cache.users[i] = res.user;
-            localStorage.setItem("peerlink_users", JSON.stringify(cache.users));
-          }
-        } catch (regErr) {
-          console.error("Failed to register user on backend sync:", regErr.message);
-        }
+        // Log sync failure and propagate the error so the UI can catch it and show error toasts
+        console.error(`Failed to sync user ${u.name} to backend:`, err.message);
+        throw new Error(`Failed to save changes: ${err.message}`);
       }
     }
   },

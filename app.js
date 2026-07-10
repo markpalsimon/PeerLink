@@ -1026,7 +1026,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     let sizeA = 0;
     let sizeB = 0;
 
-    DAYS.forEach(day => {
+    const allWeekDays = [...DAYS, "Sunday"];
+    allWeekDays.forEach(day => {
       const slotsA = schedA[day] || [];
       const slotsB = schedB[day] || [];
 
@@ -1876,6 +1877,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   let schedDragMode = true;
 
   function renderSchedulePane() {
+    // Ensure schedule is always an object — handles newly-registered users
+    if (!currentUser.schedule || typeof currentUser.schedule !== 'object') {
+      currentUser.schedule = currentUser.studySchedule || {};
+    }
+
     let calendarRowsHTML = "";
     const allDays = [...DAYS, "Sunday"];
     // 8AM to 10PM
@@ -1948,6 +1954,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     const day = cell.getAttribute("data-day");
     const hour = parseInt(cell.getAttribute("data-hour"));
 
+    // Guard: ensure schedule object is always valid
+    if (!currentUser.schedule || typeof currentUser.schedule !== 'object') {
+      currentUser.schedule = currentUser.studySchedule || {};
+    }
     if (!currentUser.schedule[day]) {
       currentUser.schedule[day] = [];
     }
@@ -1972,14 +1982,22 @@ document.addEventListener("DOMContentLoaded", async () => {
       users[index].studySchedule = currentUser.studySchedule;
 
       showToast('Saving schedule... ⏳', 'info');
-      await db.saveUsers(users);
+      try {
+        await db.saveUsers(users);
 
-      const freshUser = db.getUsers().find(u => u.id === currentUser.id);
-      if (freshUser) currentUser = freshUser;
+        const freshUser = db.getUsers().find(u => u.id === currentUser.id);
+        if (freshUser) currentUser = freshUser;
 
-      db.addLog("user", `${currentUser.name} updated schedule availability.`);
-      showToast('Schedule saved successfully!', 'success');
-      showSystemView("schedule"); // Refresh availability view
+        db.addLog("user", `${currentUser.name} updated schedule availability.`);
+        showToast('Schedule saved successfully! ✅', 'success');
+        showSystemView("schedule"); // Refresh availability view
+
+        // Recalculate matches now that schedule changed
+        if (typeof renderMatchesPane === 'function') renderMatchesPane();
+        if (typeof renderDashboardPane === 'function') renderDashboardPane();
+      } catch (err) {
+        showToast('Failed to save schedule. Please check your connection and try again.', 'error');
+      }
     }
   };
 
@@ -5257,25 +5275,29 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
 
       users[index] = { ...users[index], ...currentUser };
-      await db.saveUsers(users);
+      try {
+        await db.saveUsers(users);
 
-      const freshUser = db.getUsers().find(u => u.id === currentUser.id);
-      if (freshUser) currentUser = freshUser;
+        const freshUser = db.getUsers().find(u => u.id === currentUser.id);
+        if (freshUser) currentUser = freshUser;
 
-      // Update sidebar avatar
-      const sideAvatar = document.getElementById('side-avatar');
-      if (sideAvatar) {
-        if (currentUser.avatar && currentUser.avatar.startsWith('data:image')) {
-          sideAvatar.innerHTML = `<img src="${currentUser.avatar}" class="w-10 h-10 object-cover rounded-full" alt="avatar" />`;
-        } else {
-          sideAvatar.innerHTML = currentUser.avatar || '👤';
+        // Update sidebar avatar
+        const sideAvatar = document.getElementById('side-avatar');
+        if (sideAvatar) {
+          if (currentUser.avatar && currentUser.avatar.startsWith('data:image')) {
+            sideAvatar.innerHTML = `<img src="${currentUser.avatar}" class="w-10 h-10 object-cover rounded-full" alt="avatar" />`;
+          } else {
+            sideAvatar.innerHTML = currentUser.avatar || '👤';
+          }
         }
+        document.getElementById('side-username').textContent  = currentUser.name;
+        document.getElementById('side-program').textContent   = `${currentUser.gradeLevel || currentUser.yearSection || ''} • ${currentUser.schoolName || currentUser.program || ''}`;
+
+        db.addLog('user', `${currentUser.name} updated profile details.`);
+        showToast('Profile updated successfully! ✨', 'success');
+      } catch (err) {
+        showToast('Failed to save profile. Please check your connection and try again.', 'error');
       }
-      document.getElementById('side-username').textContent  = currentUser.name;
-      document.getElementById('side-program').textContent   = `${currentUser.gradeLevel || currentUser.yearSection || ''} • ${currentUser.schoolName || currentUser.program || ''}`;
-      
-      db.addLog('user', `${currentUser.name} updated profile details.`);
-      showToast('Profile updated successfully! ✨', 'success');
     }
   };
 
@@ -5356,14 +5378,21 @@ document.addEventListener("DOMContentLoaded", async () => {
       users[index].courses = currentUser.courses;
 
       showToast('Saving skills... ⏳', 'info');
-      await db.saveUsers(users);
+      try {
+        await db.saveUsers(users);
 
-      const freshUser = db.getUsers().find(u => u.id === currentUser.id);
-      if (freshUser) currentUser = freshUser;
+        const freshUser = db.getUsers().find(u => u.id === currentUser.id);
+        if (freshUser) currentUser = freshUser;
 
-      db.addLog("user", `${currentUser.name} updated matching skill metrics.`);
-      showToast('Skills saved! Your matches will update. 🎯', 'success');
-      showSystemView("dashboard");
+        db.addLog("user", `${currentUser.name} updated matching skill metrics.`);
+        showToast('Skills saved! Your matches will update. 🎯', 'success');
+        showSystemView("dashboard");
+
+        // Recalculate matches now that subjects changed
+        if (typeof renderMatchesPane === 'function') renderMatchesPane();
+      } catch (err) {
+        showToast('Failed to save skills. Please check your connection and try again.', 'error');
+      }
     }
   };
 
