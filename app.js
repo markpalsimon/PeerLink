@@ -770,6 +770,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const incomingCall = meetings.find(m =>
           (m.meeting_type === 'voice' || m.meeting_type === 'video') &&
           String(m.guest_id) === String(currentUser.id) &&
+          m.status === 'pending' &&
           !window.processedCallIds.has(String(m.id))
         );
 
@@ -4064,10 +4065,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (sound) sound.play().catch(() => {});
   }
 
-  window.acceptCall = function(meetingId) {
+  window.acceptCall = async function(meetingId) {
     clearTimeout(window._incomingCallTimeout);
     const overlay = document.getElementById('incoming-call-overlay');
     if (overlay) overlay.remove();
+    try {
+      // Mark direct call as accepted and add guest to approved_participants
+      await db.acceptInvitation(meetingId, currentUser.id);
+    } catch (e) {
+      console.error('Failed to accept direct call invitation:', e);
+    }
     window.joinVideoCall(meetingId);
   };
 
@@ -4473,18 +4480,16 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
     }
 
-    // Send button — use both click and touchend for mobile
+    // Send button
     const sendBtnEl = document.getElementById('chat-send-btn');
     if (sendBtnEl) {
       sendBtnEl.addEventListener('click', () => { if (activeChatCollabId) sendChatMessage(); });
-      sendBtnEl.addEventListener('touchend', (e) => { e.preventDefault(); if (activeChatCollabId) sendChatMessage(); }, { passive: false });
     }
 
-    // Upload button — use both click and touchend for mobile
+    // Upload button
     const uploadBtnEl = document.getElementById('chat-upload-btn');
     if (uploadBtnEl) {
       uploadBtnEl.addEventListener('click', () => { if (activeChatCollabId) triggerChatFileUpload(); });
-      uploadBtnEl.addEventListener('touchend', (e) => { e.preventDefault(); if (activeChatCollabId) triggerChatFileUpload(); }, { passive: false });
     }
 
     // File input change
@@ -4499,21 +4504,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     const schedBtnEl = document.getElementById('chat-header-schedule-btn');
     if (voiceBtnEl) {
       voiceBtnEl.addEventListener('click', () => { if (activeChatCollabId) startVoiceCall(activeChatCollabId); });
-      voiceBtnEl.addEventListener('touchend', (e) => { e.preventDefault(); if (activeChatCollabId) startVoiceCall(activeChatCollabId); }, { passive: false });
     }
     if (videoBtnEl) {
       videoBtnEl.addEventListener('click', () => { if (activeChatCollabId) startVideoCall(activeChatCollabId); });
-      videoBtnEl.addEventListener('touchend', (e) => { e.preventDefault(); if (activeChatCollabId) startVideoCall(activeChatCollabId); }, { passive: false });
     }
     if (schedBtnEl) {
       schedBtnEl.addEventListener('click', () => { if (activeChatCollabId) scheduleMeetingWith(activeChatCollabId); });
-      schedBtnEl.addEventListener('touchend', (e) => { e.preventDefault(); if (activeChatCollabId) scheduleMeetingWith(activeChatCollabId); }, { passive: false });
     }
-    // Back button (mobile) — bind touchend too for reliable mobile tap
+    // Back button (mobile)
     const backBtnEl = document.querySelector('#chat-conv-panel .md\\:hidden');
     if (backBtnEl) {
       backBtnEl.addEventListener('click', () => { activeChatCollabId = null; renderMessagesPane(); });
-      backBtnEl.addEventListener('touchend', (e) => { e.preventDefault(); activeChatCollabId = null; renderMessagesPane(); }, { passive: false });
     }
   }
 
@@ -4707,6 +4708,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   };
 
   window.startVoiceCall = async function(partnerId) {
+    if (window.isInitiatingCall) return;
+    window.isInitiatingCall = true;
+    setTimeout(() => { window.isInitiatingCall = false; }, 3000); // 3-second debounce window
+
     const partner = db.getUsers().find(u => u.id === partnerId);
     const partnerName = partner ? partner.name : 'Partner';
     showToast(`📞 Calling ${partnerName}...`, 'info');
@@ -4722,11 +4727,19 @@ document.addEventListener("DOMContentLoaded", async () => {
       notes:        'Instant peer-to-peer voice collaboration call.'
     };
 
-    const savedMeet = await db.createMeeting(meetData);
-    window.joinVideoCall(savedMeet.id);
+    try {
+      const savedMeet = await db.createMeeting(meetData);
+      window.joinVideoCall(savedMeet.id);
+    } catch (e) {
+      showToast('Failed to start call.', 'error');
+    }
   };
-
+ 
   window.startVideoCall = async function(partnerId) {
+    if (window.isInitiatingCall) return;
+    window.isInitiatingCall = true;
+    setTimeout(() => { window.isInitiatingCall = false; }, 3000); // 3-second debounce window
+
     const partner = db.getUsers().find(u => u.id === partnerId);
     const partnerName = partner ? partner.name : 'Partner';
     showToast(`📹 Calling ${partnerName}...`, 'info');
@@ -4742,8 +4755,12 @@ document.addEventListener("DOMContentLoaded", async () => {
       notes:        'Instant peer-to-peer video collaboration call.'
     };
 
-    const savedMeet = await db.createMeeting(meetData);
-    window.joinVideoCall(savedMeet.id);
+    try {
+      const savedMeet = await db.createMeeting(meetData);
+      window.joinVideoCall(savedMeet.id);
+    } catch (e) {
+      showToast('Failed to start call.', 'error');
+    }
   };
 
   window.scheduleMeetingWith = function(partnerId) {
