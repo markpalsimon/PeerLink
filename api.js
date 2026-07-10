@@ -438,23 +438,21 @@ const db = {
   // --- Write-Through Sync Methods (updates cache + LocalStorage + pushes to Server) ---
   
   saveUsers: async (users) => {
-    // Diff check: read previous cache from localStorage
-    const oldUsersStr = localStorage.getItem("peerlink_users");
-    const oldUsers = oldUsersStr ? JSON.parse(oldUsersStr) : [];
-
     // Clone the users array defensively so concurrent polling/mutations don't affect the save payload
     const clonedUsers = JSON.parse(JSON.stringify(users));
 
-    cache.users = users;
-    localStorage.setItem("peerlink_users", JSON.stringify(users));
-    if (isOffline) return;
+    if (isOffline) {
+      cache.users = users;
+      localStorage.setItem("peerlink_users", JSON.stringify(users));
+      return;
+    }
 
     for (let i = 0; i < clonedUsers.length; i++) {
       const u = clonedUsers[i];
       if (u.id === 'admin') continue; // Never overwrite admin via saveUsers
 
-      // Check if this specific user object has actually changed
-      const oldU = oldUsers.find(ou => ou.id === u.id);
+      // Diff check: compare against confirmed cache.users instead of a snapshot of localStorage
+      const oldU = cache.users.find(ou => ou.id === u.id);
       if (oldU && JSON.stringify(oldU) === JSON.stringify(u)) {
         continue; // Skip PUT if unchanged
       }
