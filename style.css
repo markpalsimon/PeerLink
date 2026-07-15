@@ -903,3 +903,208 @@ body.sidebar-open-body {
     border-bottom: 1px solid #f1f5f9;
   }
 }
+
+/* ================================================================
+   COMPREHENSIVE ALL-PANEL MOBILE RESPONSIVE FIXES
+   Breakpoints: 480px (small phones), 640px (large phones/phablets),
+                767px (tablets in portrait)
+   ================================================================ */
+
+/* ── Prevent horizontal overflow on all panels ──────────────────── */
+.sys-pane {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* ── Dashboard ─────────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  #sys-pane-dashboard h1 {
+    font-size: 1.5rem !important;
+    line-height: 1.3 !important;
+  }
+  /* Partner cards: allow wrap, minimum width smaller */
+  #sys-pane-dashboard .flex.flex-wrap.gap-4 > div {
+    min-width: 140px;
+    flex: 1 1 140px;
+  }
+  /* Upcoming meeting row: stack on mobile */
+  #sys-pane-dashboard .flex.items-center.justify-between.p-4 {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+  #sys-pane-dashboard .flex.items-center.justify-between.p-4 > button {
+    align-self: flex-end;
+  }
+}
+@media (max-width: 480px) {
+  #sys-pane-dashboard .flex.flex-wrap.gap-4 > div {
+    min-width: 100%;
+    flex: 1 1 100%;
+  }
+  /* Profile Completion card: stack vertically */
+  #sys-pane-dashboard .bg-white.border.rounded-2xl.p-6.shadow-sm.flex.items-center.justify-between {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+}
+
+/* ── Profile Pane ───────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  #sys-pane-profile .max-w-2xl {
+    max-width: 100% !important;
+  }
+  /* Stack save button */
+  #sys-pane-profile .flex.justify-between.items-center.border-b {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  #sys-pane-profile .flex.justify-between.items-center.border-b > button {
+    width: 100%;
+    min-height: 40px;
+  }
+  /* Avatar picker: stack vertically */
+  #sys-pane-profile .flex.items-center.gap-6 {
+    flex-direction: column;
+    align-items: center;
+  }
+  /* Profile form: single column */
+  #sys-pane-profile .grid.grid-cols-2 {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ── Schedule Pane ──────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  #sys-pane-schedule .flex.justify-between.items-center.border-b {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  #sys-pane-schedule .flex.justify-between.items-center.border-b > button {
+    width: 100%;
+    min-height: 40px;
+  }
+  /* Reduce internal card padding */
+  #sys-pane-schedule .bg-white.border.rounded-2xl {
+    padding: 0.875rem !important;
+  }
+}
+
+/* ── Skills Pane ────────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  #sys-pane-skills .max-w-2xl {
+    max-width: 100% !important;
+  }
+  #sys-pane-skills .flex.justify-between.items-center.border-b {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  #sys-pane-skills .flex.justify-between.items-center.border-b > button {
+    width: 100%;
+    min-height: 40px;
+  }
+  /* Skill scrollable area: limit to screen */
+  #edit-have-skills-grid,
+  #edit-want-skills-grid {
+    max-height: 180px !important;
+  }
+}
+
+/* ── Meetings Pane ──────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  /* Schedule form grid-cols-2 grids → 1 col */
+  #sys-pane-meetings .grid.grid-cols-2 {
+    grid-template-columns: 1fr !important;
+  }
+  #sys-pane-meetings .bg-white.border.rounded-2xl {
+    padding: 1rem !important;
+  }
+}
+@media (max-width: 480px) {
+  #sys-pane-meetings .p-4.border.rounded-xl {
+    padding: 0.625rem !important;
+  }
+}
+
+/* ── Notifications Pane ─────────────────────────────────────────── */
+@media (max-width: 767px) {
+  #sys-pane-notifications .max-w-2xl {
+    max-width: 100% !important;
+  }
+  /* Request rows: allow Accept/Decline to wrap */
+  #sys-pane-notifications .flex.justify-between.items-center.text-xs.border-b {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: flex-start;
+  }
+  #sys-pane-notifications .flex.gap-2.ml-2.shrink-0 {
+    margin-left: 0;
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+/* ── Settings Pane ──────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  #sys-pane-settings .max-w-2xl {
+    max-width: 100% !important;
+  }
+  /* Password form grid-cols-2 → 1 */
+  #sys-pane-settings .grid.grid-cols-2 {
+    grid-template-columns: 1fr !important;
+  }
+  #sys-pane-settings .bg-white.border.rounded-2xl {
+    padding: 1rem !important;
+  }
+}
+
+/* ── Admin Pane ─────────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  /* Stats cards: 2-col instead of 4-col */
+  #sys-pane-admin .grid.grid-cols-4 {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  #sys-pane-admin .bg-white.border.rounded-2xl {
+    padding: 1rem !important;
+  }
+  /* Admin tables: horizontal scroll */
+  #sys-pane-admin .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* ── Global card padding reduction on very small phones ─────────── */
+@media (max-width: 480px) {
+  #system-container main > div {
+    padding: 0.625rem !important;
+    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  /* System header: tighter padding */
+  #system-container header {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+    padding-top: 0.625rem !important;
+    padding-bottom: 0.625rem !important;
+  }
+  #sys-header-title {
+    font-size: 0.9375rem !important;
+  }
+}
+
+/* ── AI Chat widget: above mobile bottom nav ────────────────────── */
+@media (max-width: 1023px) {
+  #ai-chat-toggle {
+    bottom: calc(4.25rem + env(safe-area-inset-bottom, 0px));
+    left: 1rem;
+    width: 48px;
+    height: 48px;
+    font-size: 1.125rem;
+  }
+  #ai-chat-panel {
+    left: 0.75rem;
+    right: 0.75rem;
+    width: auto;
+    bottom: calc(7.5rem + env(safe-area-inset-bottom, 0px));
+  }
+}
